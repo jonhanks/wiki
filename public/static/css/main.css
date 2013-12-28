@@ -1,0 +1,11 @@
+body {
+	background-color: white;
+	width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	font-family: serif;
+}
+
+div#header {
+	width:100%;
+}

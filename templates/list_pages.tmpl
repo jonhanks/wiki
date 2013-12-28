@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<title>Simple Wiki</title>
+	<link rel="stylesheet" type="text/css" href="/static/css/main.css" />
+</head>
+<body>
+	<h1>Welcome to the Wiki</h1>
+	<p>This wiki has the following pages:<p>
+	<ul>
+		{{ range $Index, $PageName := .Pages}}
+		<li><a href="/{{ $PageName }}/">{{ $PageName }}</a></li>
+		{{ end }}
+	</ul>
+	<p>In addition there are the following built in pages:</p>
+	<ul>
+		<li><a href="/About/">About this wiki</a></li>
+	</ul>
+</body>
+</html>

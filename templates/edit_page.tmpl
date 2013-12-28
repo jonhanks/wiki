@@ -1,0 +1,16 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<title>Edit {{ .PageName }}</title>
+	<link rel="stylesheet" type="text/css" href="/static/css/main.css" />
+</head>
+<body>
+	<h1>Edit {{ .PageName }}</h1>
+	<p>Enter the page content for {{ .PageName }}.  You can use <a href="http://daringfireball.net/projects/markdown/syntax">markdown syntax</a> to format the page.</p>
+	<form method="post" action="">
+		<textarea name="entry">{{ .PageSrc }}</textarea>
+		<br/>
+		<input type="submit" value="Save Page"/>
+	</form>
+</body>
+</html>

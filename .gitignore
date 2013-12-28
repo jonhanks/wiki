@@ -6,6 +6,7 @@
 # Folders
 _obj
 _test
+wiki_db
 
 # Architecture specific extensions/prefixes
 *.[568vq]
