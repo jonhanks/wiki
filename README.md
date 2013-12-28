@@ -28,4 +28,4 @@ Todo
 * typing in some scripting/templating for use in pages ?
 * make some decent page templates
 * make a simple REST api
-    * Currently it is a simple html and form based system, simple is good, it does break.  But REST api's are simple and open up possibilties.
+    * Currently it is a simple html and form based system, simple is good, it doesn't break.  But REST api's are simple and open up possibilties.
