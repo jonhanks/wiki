@@ -6,6 +6,7 @@ import (
 	"github.com/russross/blackfriday"
 	"html/template"
 	"net/http"
+	"strconv"
 )
 
 var templates map[string]*template.Template = make(map[string]*template.Template)
@@ -32,22 +33,41 @@ func AboutPageHandler(w http.ResponseWriter, r *http.Request) {
 func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 
+	var rawPage []byte
 	var details struct {
-		PageName string
-		Content  template.HTML
+		PageName        string
+		Content         template.HTML
+		CurrentRevision int
+		RevisionList    <-chan int
 	}
+	var err error
+	var minRevision, maxRevision int
+
+	revision := CURRENT_REVISION
+	if revision, err = strconv.Atoi(r.FormValue("rev")); err != nil {
+		revision = CURRENT_REVISION
+	}
+
 	details.PageName = PageName
 
-	rawPage, err := wiki().GetPage(PageName)
+	page, err := wiki().GetPage(PageName)
 	if err != nil {
-		if err != NOT_FOUND {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	revisionCount := page.Revisions()
+	if revisionCount == 0 {
 		// page not found
 		templates["not_found"].Execute(w, &details)
 		return
 	}
+	if rawPage, err = page.GetData(revision); err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	details.CurrentRevision, minRevision, maxRevision = generateRevisionSplit(revision, revisionCount-1)
+	details.RevisionList = generateInt(minRevision, maxRevision)
+
 	for _, wikiWord := range ExtractWikiWords(rawPage) {
 		word := string(wikiWord)
 		rawPage = bytes.Replace(rawPage, wikiWord, []byte("["+word+"](/"+word+"/)"), -1)
@@ -65,14 +85,19 @@ func ShowEditPageHandler(params martini.Params, wiki func() DB, w http.ResponseW
 	}
 	details.PageName = PageName
 
-	rawPage, err := wiki().GetPage(PageName)
+	page, err := wiki().GetPage(PageName)
 	if err != nil {
-		if err != NOT_FOUND {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
+		w.WriteHeader(http.StatusNotFound)
+		return
 	} else {
-		details.PageSrc = string(rawPage)
+		if page.Revisions() > 0 {
+			if rawPage, err := page.GetData(CURRENT_REVISION); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			} else {
+				details.PageSrc = string(rawPage)
+			}
+		}
 	}
 	templates["edit_page"].Execute(w, &details)
 }
@@ -86,6 +111,11 @@ func EditPageHandler(params martini.Params, wiki func() DB, w http.ResponseWrite
 	}
 	src := r.FormValue("entry")
 
-	wiki().SavePage(PageName, []byte(src))
+	page, err := wiki().GetPage(PageName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	page.AddRevision([]byte(src))
 	http.Redirect(w, r, "/"+PageName+"/", 302)
 }

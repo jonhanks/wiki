@@ -9,3 +9,9 @@ body {
 div#header {
 	width:100%;
 }
+
+textarea {
+	width: 80%;
+	height: 20%;
+	min-height: 20%;
+}

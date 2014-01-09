@@ -11,5 +11,12 @@
 	<div id="content">
 		{{ .Content }}
 	</div>
+	<div id="footer">
+		Revisions: <a href="?rev=0">First</a> &lt;
+		{{ range .RevisionList }}
+			<a href="?rev={{ . }}">{{ . }}</a> &lt;
+		{{ end }}
+		<a href="?rev=-1">Current</a>
+	</div>
 </body>
 </html>

@@ -53,3 +53,36 @@ func getMaxFDBRevision(fInfos []os.FileInfo) int {
 	}
 	return maxRevision
 }
+
+func generateRevisionSplit(currentRevision, maxRevision int) (cur, min, max int) {
+	cur = currentRevision
+	if currentRevision < 0 {
+		cur = maxRevision
+	}
+	max = cur + 5
+	if max > maxRevision {
+		max = maxRevision
+	}
+	min = cur - 5
+	if min < 0 {
+		min = 0
+	}
+	return cur, min, max
+}
+
+func generateInt(begin, end int) <-chan int {
+	ch := make(chan int)
+
+	go func() {
+		defer close(ch)
+		step := 1
+		if begin >= end {
+			step = -1
+		}
+		for i := begin; i != end; i += step {
+			ch <- i
+		}
+		ch <- end
+	}()
+	return ch
+}

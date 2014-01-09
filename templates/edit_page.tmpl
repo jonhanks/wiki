@@ -8,7 +8,7 @@
 	<h1>Edit {{ .PageName }}</h1>
 	<p>Enter the page content for {{ .PageName }}.  You can use <a href="http://daringfireball.net/projects/markdown/syntax">markdown syntax</a> to format the page.</p>
 	<form method="post" action="">
-		<textarea name="entry">{{ .PageSrc }}</textarea>
+		<textarea name="entry" rows="25">{{ .PageSrc }}</textarea>
 		<br/>
 		<input type="submit" value="Save Page"/>
 	</form>

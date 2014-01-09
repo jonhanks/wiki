@@ -14,6 +14,9 @@ const (
 	fdb_Pages = "pages"
 
 	fdb_Mode = os.ModeDir | 0750
+
+	CURRENT_REVISION = -1
+	NO_REVISIONS     = 0
 )
 
 var (
@@ -24,22 +27,44 @@ var (
 	fdb_Page_re = regexp.MustCompile("^[0-9]{8}$")
 )
 
-type DB interface {
-	PageExists(string) (bool, error)
-	GetPage(string) ([]byte, error)
-	SavePage(string, []byte) error
-	ListPages() ([]string, error)
-	CountPages() (int, error)
+type Page interface {
+	GetData(int) ([]byte, error)
+	AddRevision([]byte) error
+	Revisions() int
+	//AddAttachment(io.Reader, string) error
+	//ListAttachments() ([]string, error)
+	//CountAttachments() (int, error)
+	//GetAttachment(string)
 }
 
+// Generic interface into the database
+type DB interface {
+	PageExists(string) (bool, error) // given a page name query to see if it exists
+	GetPage(string) (Page, error)    // retreive a page given the name, it will return the error NOT_FOUND if the page does not exist
+	ListPages() ([]string, error)    // list the pages in the wiki
+	CountPages() (int, error)        // return the number of pages in the wiki
+}
+
+// A simple memory based wiki database
 type memDB struct {
 	lock  sync.Mutex
-	pages map[string][]byte
+	pages map[string]*memPage
 }
 
+// a page in the memory based wiki
+type memPage struct {
+	db        *memDB
+	revisions [][]byte
+}
+
+// A simple file system backed wiki database
 type fileDB struct {
 	lock sync.Mutex
 	root string
+}
+
+type filePage struct {
+	path string
 }
 
 func newFileDB(root string) (DB, error) {
@@ -75,7 +100,7 @@ func (fdb *fileDB) PageExists(key string) (bool, error) {
 	return true, nil
 }
 
-func (fdb *fileDB) GetPage(key string) ([]byte, error) {
+func (fdb *fileDB) GetPage(key string) (Page, error) {
 	fdb.lock.Lock()
 	defer fdb.lock.Unlock()
 
@@ -83,55 +108,7 @@ func (fdb *fileDB) GetPage(key string) ([]byte, error) {
 		return nil, dbErr
 	}
 
-	pagePath := fdb.pageDirName(key)
-
-	fInfos, err := ioutil.ReadDir(pagePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, NOT_FOUND
-		}
-		return nil, err
-	}
-
-	maxRevision := getMaxFDBRevision(fInfos)
-	name := fmt.Sprintf("%08d", maxRevision)
-	return ioutil.ReadFile(path.Join(pagePath, name))
-}
-
-func (fdb *fileDB) SavePage(key string, value []byte) error {
-	fdb.lock.Lock()
-	defer fdb.lock.Unlock()
-
-	if !IsWikiWord(key) {
-		return dbErr
-	}
-
-	pagePath := fdb.pageDirName(key)
-
-	err := os.MkdirAll(pagePath, fdb_Mode)
-	if err != nil {
-		return err
-	}
-	fInfos, err := ioutil.ReadDir(pagePath)
-	if err != nil {
-		return err
-	}
-	f, err := ioutil.TempFile(pagePath, "tmp")
-	if err != nil {
-		return err
-	}
-	tmpName := f.Name()
-	defer os.Remove(tmpName)
-
-	if err := writeAndClose(f, value); err != nil {
-		return err
-	}
-
-	maxRevision := getMaxFDBRevision(fInfos)
-
-	newFName := fmt.Sprintf("%08d", maxRevision+1)
-	err = os.Rename(tmpName, path.Join(pagePath, newFName))
-	return err
+	return Page(&filePage{path: fdb.pageDirName(key)}), nil
 }
 
 func (fdb *fileDB) ListPages() ([]string, error) {
@@ -163,8 +140,60 @@ func (fdb *fileDB) CountPages() (int, error) {
 	return len(fInfos), nil
 }
 
-func newMemDB() DB {
-	return &memDB{pages: make(map[string][]byte)}
+func (fpg *filePage) GetData(index int) ([]byte, error) {
+	fInfos, err := ioutil.ReadDir(fpg.path)
+	if err != nil {
+
+		return nil, err
+	}
+	max := getMaxFDBRevision(fInfos)
+	if max < 0 || index > max || (index < 0 && index != CURRENT_REVISION) {
+		return nil, dbErr
+	}
+	if index == CURRENT_REVISION {
+		index = max
+	}
+	fname := fmt.Sprintf("%08d", index)
+	return ioutil.ReadFile(path.Join(fpg.path, fname))
+}
+
+func (fpg *filePage) AddRevision(value []byte) error {
+	// this is a noop if it already exists
+	err := os.MkdirAll(fpg.path, fdb_Mode)
+	if err != nil {
+		return err
+	}
+	fInfos, err := ioutil.ReadDir(fpg.path)
+	if err != nil {
+		return err
+	}
+	f, err := ioutil.TempFile(fpg.path, "tp_")
+	if err != nil {
+		return err
+	}
+	tmpName := f.Name()
+	defer os.Remove(tmpName)
+
+	if err := writeAndClose(f, value); err != nil {
+		return err
+	}
+
+	maxRevision := getMaxFDBRevision(fInfos)
+
+	newFName := fmt.Sprintf("%08d", maxRevision+1)
+	err = os.Rename(tmpName, path.Join(fpg.path, newFName))
+	return err
+}
+
+func (fpg *filePage) Revisions() int {
+	if fInfos, err := ioutil.ReadDir(fpg.path); err == nil {
+		return getMaxFDBRevision(fInfos) + 1
+	}
+	return NO_REVISIONS
+}
+
+func newMemDB() (DB, error) {
+	return &memDB{pages: make(map[string]*memPage)}, nil
 }
 
 func (mdb *memDB) PageExists(key string) (bool, error) {
@@ -174,11 +203,14 @@ func (mdb *memDB) PageExists(key string) (bool, error) {
 	if !IsWikiWord(key) {
 		return false, dbErr
 	}
-	_, ok := mdb.pages[key]
-	return ok, nil
+	page, ok := mdb.pages[key]
+	if ok {
+		return page.Revisions() != NO_REVISIONS, nil
+	}
+	return false, nil
 }
 
-func (mdb *memDB) GetPage(key string) ([]byte, error) {
+func (mdb *memDB) GetPage(key string) (Page, error) {
 	mdb.lock.Lock()
 	defer mdb.lock.Unlock()
 
@@ -187,20 +219,10 @@ func (mdb *memDB) GetPage(key string) ([]byte, error) {
 	}
 	val, ok := mdb.pages[key]
 	if !ok {
-		return nil, NOT_FOUND
+		val = &memPage{db: mdb, revisions: make([][]byte, 0)}
+		mdb.pages[key] = val
 	}
-	return val, nil
-}
-
-func (mdb *memDB) SavePage(key string, value []byte) error {
-	mdb.lock.Lock()
-	defer mdb.lock.Unlock()
-
-	if !IsWikiWord(key) {
-		return dbErr
-	}
-	mdb.pages[key] = value
-	return dbErr
+	return Page(val), nil
 }
 
 func (mdb *memDB) ListPages() ([]string, error) {
@@ -209,8 +231,10 @@ func (mdb *memDB) ListPages() ([]string, error) {
 
 	cnt := len(mdb.pages)
 	results := make([]string, 0, cnt)
-	for key, _ := range mdb.pages {
-		results = append(results, key)
+	for key, page := range mdb.pages {
+		if page.Revisions() > 0 {
+			results = append(results, key)
+		}
 	}
 	return results, nil
 
@@ -220,5 +244,31 @@ func (mdb *memDB) CountPages() (int, error) {
 	mdb.lock.Lock()
 	defer mdb.lock.Unlock()
 
-	return len(mdb.pages), nil
+	count := 0
+	for _, page := range mdb.pages {
+		if page.Revisions() > 0 {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (mp *memPage) GetData(index int) ([]byte, error) {
+	max := len(mp.revisions)
+	if max == 0 || index >= max || (index < 0 && index != CURRENT_REVISION) {
+		return nil, dbErr
+	}
+	if index == CURRENT_REVISION {
+		return mp.revisions[max-1], nil
+	}
+	return mp.revisions[index], nil
+}
+
+func (mp *memPage) AddRevision(value []byte) error {
+	mp.revisions = append(mp.revisions, value)
+	return nil
+}
+
+func (mp *memPage) Revisions() int {
+	return len(mp.revisions)
 }

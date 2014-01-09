@@ -106,3 +106,38 @@ func TestGetMaxFDBRevision(t *testing.T) {
 		So(getMaxFDBRevision(make([]os.FileInfo, 0, 0)), ShouldEqual, -1)
 	})
 }
+
+func TestGenerateRevisionSplit(t *testing.T) {
+	tests := []struct {
+		InCur, InMax, OutCur, OutMin, OutMax int
+	}{
+		{-1, 5, 5, 0, 5},
+		{5, 5, 5, 0, 5},
+		{-1, 10, 10, 5, 10},
+		{10, 10, 10, 5, 10},
+		{5, 20, 5, 0, 10},
+		{-1, 0, 0, 0, 0},
+	}
+
+	for _, testVal := range tests {
+		cur, min, max := generateRevisionSplit(testVal.InCur, testVal.InMax)
+		if testVal.OutCur != cur || testVal.OutMin != min || testVal.OutMax != max {
+			t.Errorf("inputs (%d, %d) outputs (%d, %d, %d) expecting (%d, %d, %d)", testVal.InCur, testVal.InMax, cur, min, max, testVal.OutCur, testVal.OutMin, testVal.OutMax)
+		}
+	}
+}
+
+func TestGenerateInt(t *testing.T) {
+	var v int
+
+	for v = range generateInt(0, 5) {
+	}
+	if v != 5 {
+		t.Error("Expecting 5, got ", v)
+	}
+	for v = range generateInt(5, 0) {
+	}
+	if v != 0 {
+		t.Error("Expecting 0, got ", v)
+	}
+}

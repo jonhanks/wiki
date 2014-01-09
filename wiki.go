@@ -9,6 +9,7 @@ var wiki DB
 func main() {
 	var err error
 	wiki, err = newFileDB("wiki_db")
+	//wiki, err = newMemDB()
 	if err != nil {
 		panic(err.Error())
 	}
