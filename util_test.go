@@ -5,6 +5,7 @@ import (
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -96,8 +97,32 @@ func TestWriteAndClose(t *testing.T) {
 	})
 }
 
+func TestCopyAndClose(t *testing.T) {
+	Convey("copyAndClose should always call close no matter what happens", t, func() {
+		twc1 := testWriteCloser{}
+		err := copyAndClose(&twc1, strings.NewReader("1234"))
+		So(err, ShouldBeNil)
+		So(twc1.closed, ShouldBeTrue)
+		twc2 := testWriteCloser{failOnWrite: true}
+		err = copyAndClose(&twc2, strings.NewReader("1234"))
+		So(err, ShouldNotBeNil)
+		So(twc2.closed, ShouldBeTrue)
+	})
+}
+
 func TestGetMaxFDBRevision(t *testing.T) {
 	Convey("getMaxFDBRevision should return the highest file revision number for a list of os.FileInfos, where the format of the filename is the regexp [0-9]{8}", t, func() {
+		fInfos := make([]os.FileInfo, 0, 3)
+		fInfos = append(fInfos, &testFDBFileInfo{rev: 0})
+		fInfos = append(fInfos, &testFDBFileInfo{rev: 5})
+		fInfos = append(fInfos, &testFDBFileInfo{rev: 3})
+		So(getMaxFDBRevision(fInfos), ShouldEqual, 5)
+		So(getMaxFDBRevision(make([]os.FileInfo, 0, 0)), ShouldEqual, -1)
+	})
+}
+
+func TestGetCountFDBAttachments(t *testing.T) {
+	Convey("getCountFDBAttachments should return the number of attachments found by matching names to the attachment regexp", t, func() {
 		fInfos := make([]os.FileInfo, 0, 3)
 		fInfos = append(fInfos, &testFDBFileInfo{rev: 0})
 		fInfos = append(fInfos, &testFDBFileInfo{rev: 5})

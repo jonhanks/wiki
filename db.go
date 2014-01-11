@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -12,6 +14,8 @@ import (
 
 const (
 	fdb_Pages = "pages"
+
+	fdb_attachment_prefix = "a_"
 
 	fdb_Mode = os.ModeDir | 0750
 
@@ -24,17 +28,26 @@ var (
 
 	NOT_FOUND = errors.New("Page not found")
 
+	attachment_re = regexp.MustCompile("^[0-9A-Za-z\\-\\_]*(\\.[0-9A-Za-z\\-\\_]+)?$")
+
 	fdb_Page_re = regexp.MustCompile("^[0-9]{8}$")
+
+	fdb_Attachment_re = regexp.MustCompile("^a_[0-9A-Za-z\\-\\_]*(\\.[0-9A-Za-z\\-\\_]+)?$")
 )
+
+type Attachment interface {
+	Open() (io.ReadCloser, error)
+	Name() string
+}
 
 type Page interface {
 	GetData(int) ([]byte, error)
 	AddRevision([]byte) error
 	Revisions() int
-	//AddAttachment(io.Reader, string) error
-	//ListAttachments() ([]string, error)
-	//CountAttachments() (int, error)
-	//GetAttachment(string)
+	AddAttachment(io.Reader, string) error
+	ListAttachments() ([]string, error)
+	CountAttachments() (int, error)
+	GetAttachment(string) (Attachment, error)
 }
 
 // Generic interface into the database
@@ -53,8 +66,15 @@ type memDB struct {
 
 // a page in the memory based wiki
 type memPage struct {
-	db        *memDB
-	revisions [][]byte
+	lock        sync.Mutex
+	db          *memDB
+	revisions   [][]byte
+	attachments map[string][]byte
+}
+
+type memAttachment struct {
+	page *memPage
+	key  string
 }
 
 // A simple file system backed wiki database
@@ -65,6 +85,11 @@ type fileDB struct {
 
 type filePage struct {
 	path string
+}
+
+type fileAttachment struct {
+	path string
+	key  string
 }
 
 func newFileDB(root string) (DB, error) {
@@ -192,6 +217,67 @@ func (fpg *filePage) Revisions() int {
 	return NO_REVISIONS
 }
 
+func (fpg *filePage) AddAttachment(data io.Reader, key string) error {
+	if !attachment_re.MatchString(key) {
+		return dbErr
+	}
+	f, err := ioutil.TempFile(fpg.path, "ta_")
+	if err != nil {
+		return err
+	}
+	tmpName := f.Name()
+	defer os.Remove(f.Name())
+
+	if err := copyAndClose(f, data); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpName, path.Join(fpg.path, "a_"+key))
+}
+
+func (fpg *filePage) ListAttachments() ([]string, error) {
+	if fInfos, err := ioutil.ReadDir(fpg.path); err == nil {
+		count := getCountFDBAttachments(fInfos)
+		results := make([]string, 0, count)
+		for _, info := range fInfos {
+			if fdb_Attachment_re.MatchString(info.Name()) {
+				results = append(results, info.Name()[2:])
+			}
+		}
+		return results, nil
+	} else {
+		return nil, err
+	}
+}
+
+func (fpg *filePage) CountAttachments() (int, error) {
+	if fInfos, err := ioutil.ReadDir(fpg.path); err == nil {
+		return getCountFDBAttachments(fInfos), nil
+	} else {
+		return 0, err
+	}
+}
+
+func (fpg *filePage) GetAttachment(key string) (Attachment, error) {
+	if !attachment_re.MatchString(key) {
+		return nil, dbErr
+	}
+	path := path.Join(fpg.path, "a_"+key)
+	_, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	return &fileAttachment{path: path, key: key}, nil
+}
+
+func (fa *fileAttachment) Name() string {
+	return fa.key
+}
+
+func (fa *fileAttachment) Open() (io.ReadCloser, error) {
+	return os.Open(fa.path)
+}
+
 func newMemDB() (DB, error) {
 	return &memDB{pages: make(map[string]*memPage)}, nil
 }
@@ -219,7 +305,7 @@ func (mdb *memDB) GetPage(key string) (Page, error) {
 	}
 	val, ok := mdb.pages[key]
 	if !ok {
-		val = &memPage{db: mdb, revisions: make([][]byte, 0)}
+		val = &memPage{db: mdb, revisions: make([][]byte, 0), attachments: make(map[string][]byte)}
 		mdb.pages[key] = val
 	}
 	return Page(val), nil
@@ -254,6 +340,9 @@ func (mdb *memDB) CountPages() (int, error) {
 }
 
 func (mp *memPage) GetData(index int) ([]byte, error) {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
 	max := len(mp.revisions)
 	if max == 0 || index >= max || (index < 0 && index != CURRENT_REVISION) {
 		return nil, dbErr
@@ -265,10 +354,77 @@ func (mp *memPage) GetData(index int) ([]byte, error) {
 }
 
 func (mp *memPage) AddRevision(value []byte) error {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
 	mp.revisions = append(mp.revisions, value)
 	return nil
 }
 
 func (mp *memPage) Revisions() int {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
 	return len(mp.revisions)
+}
+
+func (mp *memPage) AddAttachment(data io.Reader, key string) error {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
+	if !attachment_re.MatchString(key) {
+		return dbErr
+	}
+	//if _, ok := mp.attachments[key]; ok {
+	//	return dbErr
+	//}
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, data); err != nil {
+		return err
+	}
+	mp.attachments[key] = buf.Bytes()
+	return nil
+}
+
+func (mp *memPage) ListAttachments() ([]string, error) {
+	count, err := mp.CountAttachments()
+	if err != nil {
+		return nil, err
+	}
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
+	results := make([]string, 0, count)
+	for key, _ := range mp.attachments {
+		results = append(results, key)
+	}
+	return results, nil
+}
+
+func (mp *memPage) CountAttachments() (int, error) {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
+	return len(mp.attachments), nil
+}
+
+func (mp *memPage) GetAttachment(key string) (Attachment, error) {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+
+	if _, ok := mp.attachments[key]; !ok {
+		return nil, dbErr
+	}
+	return &memAttachment{page: mp, key: key}, nil
+}
+
+func (ma *memAttachment) Name() string {
+	return ma.key
+}
+
+func (ma *memAttachment) Open() (io.ReadCloser, error) {
+	ma.page.lock.Lock()
+	defer ma.page.lock.Unlock()
+
+	return ioutil.NopCloser(bytes.NewReader(ma.page.attachments[ma.key])), nil
 }

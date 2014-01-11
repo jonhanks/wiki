@@ -40,6 +40,12 @@ func writeAndClose(wc io.WriteCloser, value []byte) error {
 	return err
 }
 
+func copyAndClose(wc io.WriteCloser, input io.Reader) error {
+	defer wc.Close()
+	_, err := io.Copy(wc, input)
+	return err
+}
+
 func getMaxFDBRevision(fInfos []os.FileInfo) int {
 	maxRevision := -1
 	for _, info := range fInfos {
@@ -52,6 +58,17 @@ func getMaxFDBRevision(fInfos []os.FileInfo) int {
 		}
 	}
 	return maxRevision
+}
+
+func getCountFDBAttachments(fInfos []os.FileInfo) int {
+	count := 0
+	for _, info := range fInfos {
+		name := path.Base(info.Name())
+		if fdb_Attachment_re.MatchString(name) {
+			count++
+		}
+	}
+	return count
 }
 
 func generateRevisionSplit(currentRevision, maxRevision int) (cur, min, max int) {
