@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/codegangsta/martini"
 	"github.com/russross/blackfriday"
 	"html/template"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -38,6 +40,7 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 		PageName        string
 		Content         template.HTML
 		CurrentRevision int
+		AttachmentList  []string
 		RevisionList    <-chan int
 	}
 	var err error
@@ -65,6 +68,11 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	details.AttachmentList, err = page.ListAttachments()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	details.CurrentRevision, minRevision, maxRevision = generateRevisionSplit(revision, revisionCount-1)
 	details.RevisionList = generateInt(minRevision, maxRevision)
 
@@ -72,21 +80,81 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 		word := string(wikiWord)
 		rawPage = bytes.Replace(rawPage, wikiWord, []byte("["+word+"](/"+word+"/)"), -1)
 	}
-	details.Content = template.HTML(string(blackfriday.MarkdownCommon(rawPage)))
+	// inject attachment information here
+	buf := &bytes.Buffer{}
+
+	for _, attachment := range details.AttachmentList {
+		buf.WriteString("[" + attachment + "]: ./" + attachment + "\n")
+	}
+	buf.Write(rawPage)
+	details.Content = template.HTML(string(blackfriday.MarkdownCommon(buf.Bytes())))
 	templates["wiki_page"].Execute(w, &details)
+}
+
+func AttachmentHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	PageName := params["name"]
+	AttachmentName := params["attachment"]
+
+	page, err := wiki().GetPage(PageName)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	attachment, err := page.GetAttachment(AttachmentName)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	stream, err := attachment.Open()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer stream.Close()
+	io.Copy(w, stream)
+}
+
+func AddAttachmentHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	PageName := params["name"]
+
+	page, err := wiki().GetPage(PageName)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	_ = page
+	f, _, err := r.FormFile("file")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	defer f.Close()
+	name := r.FormValue("name")
+	fmt.Println("Adding attachment '" + name + "'")
+	err = page.AddAttachment(f, name)
+	if err != nil {
+		fmt.Println("Error adding attachment", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/edit/"+PageName+"/", http.StatusFound)
 }
 
 func ShowEditPageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 
+	fmt.Println("ShowEditPageHandler ", PageName)
+
 	var details struct {
-		PageName string
-		PageSrc  string
+		PageName       string
+		PageSrc        string
+		AttachmentList []string
 	}
 	details.PageName = PageName
 
 	page, err := wiki().GetPage(PageName)
 	if err != nil {
+		fmt.Println(err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	} else {
@@ -96,6 +164,11 @@ func ShowEditPageHandler(params martini.Params, wiki func() DB, w http.ResponseW
 				return
 			} else {
 				details.PageSrc = string(rawPage)
+			}
+			details.AttachmentList, err = page.ListAttachments()
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 		}
 	}

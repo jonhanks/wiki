@@ -103,3 +103,7 @@ func generateInt(begin, end int) <-chan int {
 	}()
 	return ch
 }
+
+func getListenAddress() string {
+	return ""
+}

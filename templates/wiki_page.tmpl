@@ -12,6 +12,14 @@
 		{{ .Content }}
 	</div>
 	<div id="footer">
+		<div id="attachments">
+			Attachments:
+			<ul>
+			{{ range .AttachmentList }}
+				<li><a href="./{{ . }}">{{ . }}</a></li>
+			{{ end }}
+			</ul>
+		</div>
 		Revisions: <a href="?rev=0">First</a> &lt;
 		{{ range .RevisionList }}
 			<a href="?rev={{ . }}">{{ . }}</a> &lt;

@@ -10,6 +10,11 @@ div#header {
 	width:100%;
 }
 
+div#attachments {
+	background-color: Turquoise;
+	padding: 0.5cm;
+}
+
 textarea {
 	width: 80%;
 	height: 20%;

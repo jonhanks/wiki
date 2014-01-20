@@ -106,6 +106,49 @@ func TestPageHandler(t *testing.T) {
 	})
 }
 
+func TestAttachmentHandler(t *testing.T) {
+	wiki, _ := newMemDB()
+	f := func() DB {
+		return wiki
+	}
+
+	Convey("First we create a wiki database", t, func() {
+		page, _ := wiki.GetPage("PageOne")
+		page.AddRevision([]byte("AbcDef"))
+		page.AddAttachment(strings.NewReader("test"), "test.txt")
+
+		Convey("After adding pages we can test for responses from the handler", func() {
+			record := httptest.NewRecorder()
+			req, err := http.NewRequest("GET", "/PageOne/test.txt", nil)
+			if err != nil {
+				t.Fatalf("Unable to create test request")
+			}
+			AttachmentHandler(map[string]string{"name": "PageOne", "attachment": "test.txt"}, f, record, req)
+			So(record.Code, ShouldEqual, http.StatusOK)
+
+			Convey("Testing for a non-existant attachment should give an error", func() {
+				record := httptest.NewRecorder()
+				req, err := http.NewRequest("GET", "/PageOne/missing.txt", nil)
+				if err != nil {
+					t.Fatalf("Unable to create test request")
+				}
+				AttachmentHandler(map[string]string{"name": "PageOne", "attachment": "missing.txt"}, f, record, req)
+				So(record.Code, ShouldEqual, http.StatusNotFound)
+
+				Convey("Testing for a non-existant page should give an error", func() {
+					record := httptest.NewRecorder()
+					req, err := http.NewRequest("GET", "/Invalid/test.txt", nil)
+					if err != nil {
+						t.Fatalf("Unable to create test request")
+					}
+					AttachmentHandler(map[string]string{"name": "Invalid", "attachment": "test.txt"}, f, record, req)
+					So(record.Code, ShouldEqual, http.StatusNotFound)
+				})
+			})
+		})
+	})
+}
+
 func TestShowEditPageHandler(t *testing.T) {
 	wiki, _ := newMemDB()
 	f := func() DB {
@@ -135,6 +178,16 @@ func TestShowEditPageHandler(t *testing.T) {
 				}
 				ShowEditPageHandler(map[string]string{"name": "Invalid"}, f, record, req)
 				So(record.Code, ShouldEqual, http.StatusNotFound)
+
+				Convey("Editing a non-existant page (with a valid name) should work fine", func() {
+					record := httptest.NewRecorder()
+					req, err := http.NewRequest("GET", "/edit/NotYetCreated/", nil)
+					if err != nil {
+						t.Fatalf("Unable to create test request")
+					}
+					ShowEditPageHandler(map[string]string{"name": "NotYetCreated"}, f, record, req)
+					So(record.Code, ShouldEqual, http.StatusOK)
+				})
 			})
 		})
 	})

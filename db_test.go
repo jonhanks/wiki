@@ -64,6 +64,8 @@ func doTestAttachments(t *testing.T, db DB, dbType string) {
 			Convey("Attachments cannot have an invalid name", func() {
 				err = page.AddAttachment(strings.NewReader(attachment1), "$attachment1.txt")
 				So(err, ShouldNotBeNil)
+				err = page.AddAttachment(strings.NewReader(attachment1), "")
+				So(err, ShouldNotBeNil)
 
 				Convey("Adding an attachment should bring the count to 1", func() {
 					err = page.AddAttachment(strings.NewReader(attachment1), "attachment1.txt")

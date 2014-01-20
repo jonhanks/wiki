@@ -28,11 +28,11 @@ var (
 
 	NOT_FOUND = errors.New("Page not found")
 
-	attachment_re = regexp.MustCompile("^[0-9A-Za-z\\-\\_]*(\\.[0-9A-Za-z\\-\\_]+)?$")
+	attachment_re = regexp.MustCompile("^[0-9A-Za-z\\-\\_]+(\\.[0-9A-Za-z\\-\\_]+)?$")
 
 	fdb_Page_re = regexp.MustCompile("^[0-9]{8}$")
 
-	fdb_Attachment_re = regexp.MustCompile("^a_[0-9A-Za-z\\-\\_]*(\\.[0-9A-Za-z\\-\\_]+)?$")
+	fdb_Attachment_re = regexp.MustCompile("^a_[0-9A-Za-z\\-\\_]+(\\.[0-9A-Za-z\\-\\_]+)?$")
 )
 
 type Attachment interface {
@@ -219,7 +219,7 @@ func (fpg *filePage) Revisions() int {
 
 func (fpg *filePage) AddAttachment(data io.Reader, key string) error {
 	if !attachment_re.MatchString(key) {
-		return dbErr
+		return errors.New("Invalid name " + key)
 	}
 	f, err := ioutil.TempFile(fpg.path, "ta_")
 	if err != nil {

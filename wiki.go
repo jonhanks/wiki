@@ -21,8 +21,10 @@ func main() {
 
 	r.Get("/", ListPagesHandler)
 	r.Get("/About/", AboutPageHandler)
-	r.Get("/:name/", PageHandler)
 	r.Get("/edit/:name/", ShowEditPageHandler)
 	r.Post("/edit/:name/", EditPageHandler)
-	r.Run()
+	r.Post("/edit/:name/attachment/", AddAttachmentHandler)
+	r.Get("/:name/", PageHandler)
+	r.Get("/:name/:attachment", AttachmentHandler)
+	r.Run() //http.ListenAndServe(getListenAddress(), r)
 }

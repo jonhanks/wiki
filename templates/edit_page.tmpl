@@ -12,5 +12,18 @@
 		<br/>
 		<input type="submit" value="Save Page"/>
 	</form>
+	<div id="attachments">
+		Attachments:
+		<ul>
+		{{ range .AttachmentList }}
+			<li>{{ . }}</a></li>
+		{{ end }}
+		</ul>
+		<form method="post" action="./attachment/" enctype="multipart/form-data">
+			<label>Attachment Name:</label><input type="text" name="name"/><br/>
+			<lable>File:</label><input type="file" name="file"/><br/>
+			<input type="submit" value="Load Attachment"/>
+		</form>
+	</div>
 </body>
 </html>
