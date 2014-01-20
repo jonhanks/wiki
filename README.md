@@ -1,7 +1,7 @@
 wiki
 ====
 
-A simple Go  based wiki.  This is being done because each OS X upgrade breaks my moin moin install and to provide a test project for using the Martini project.
+A simple Go  based wiki.  This is being done because each OS X upgrade breaks my apache (and thus my moin moin install) and to provide a test project for using some go toolkits and libraries (Martini and GoConvey).
 
 Basic goals:
 
