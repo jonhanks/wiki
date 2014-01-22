@@ -16,10 +16,11 @@ Current Status:
 * Basic Wiki features work
     * Create/edit pages
     * Automatically setup links between pages
+    * Pages have a history
+    * Old page revisions can be viewed
 
 Todo
 
-* Revision/History
 * Users
 * Modular authentication
 * Attachments & images
