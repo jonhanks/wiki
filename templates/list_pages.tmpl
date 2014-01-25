@@ -5,19 +5,26 @@
 	<link rel="stylesheet" type="text/css" href="/static/css/main.css" />
 </head>
 <body>
-	<div id="header">
-		<p><a href="/About/">About the Wiki</a></p>
+	<div id="main">
+		<div id="header">
+			<h1>Welcome to the Wiki</h1>
+			<span class="breadcrumb"><a href="/About/">About</a></span>
+		</div>
+		<div id="content">
+			<p>This wiki has the following pages:<p>
+			<ul>
+				{{ range $Index, $PageName := .Pages}}
+				<li><a href="/{{ $PageName }}/">{{ $PageName }}</a></li>
+				{{ end }}
+			</ul>
+			<p>In addition there are the following built in pages:</p>
+			<ul>
+				<li><a href="/About/">About this wiki</a></li>
+			</ul>
+			<div id="footer">
+				<span>Simple Wiki</span>
+			</div>
+		</div>
 	</div>
-	<h1>Welcome to the Wiki</h1>
-	<p>This wiki has the following pages:<p>
-	<ul>
-		{{ range $Index, $PageName := .Pages}}
-		<li><a href="/{{ $PageName }}/">{{ $PageName }}</a></li>
-		{{ end }}
-	</ul>
-	<p>In addition there are the following built in pages:</p>
-	<ul>
-		<li><a href="/About/">About this wiki</a></li>
-	</ul>
 </body>
 </html>

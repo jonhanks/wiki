@@ -1,18 +1,65 @@
 body {
-	background-color: white;
+	background-color: #EBE0CC;
 	width: 90%;
 	margin-left: auto;
 	margin-right: auto;
 	font-family: serif;
 }
 
+div#main {
+	background-color: white;
+	border: 1px solid #46433D;
+	padding: 0px;
+	border-radius: 5px;
+	box-shadow: 5px 5px 2px #46433D;
+}
+
 div#header {
 	width:100%;
+	height: 1.5cm;
+	background-color: #1F3D99;
+	color: white;
+	margin: 0px;
+	padding-top: 10px;
+}
+
+div#header h1 {
+	display: inline;
+	padding-left: .25cm;
+}
+
+div#header a {
+	color: white;
+}
+
+div#header span.breadcrumb {
+	float: right;
+	vertical-align: bottom;
+	padding-right: .25cm;
+}
+
+div#content {
+	padding: .25cm;
+}
+
+div#footer {
+	border-top: 1px solid #46433D;
+	font-size: smaller;
+	height: 1cm;
+	padding: .25cm .25cm 0cm .25cm;
+}
+
+div#footer span {
+	float: right;
 }
 
 div#attachments {
 	background-color: Turquoise;
-	padding: 0.5cm;
+	padding: 0.25cm;
+}
+
+img {
+	width: 50%;
 }
 
 textarea {

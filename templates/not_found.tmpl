@@ -1,14 +1,22 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-	<title>Page Not Found</title>
+	<title>Wiki Page Not Found</title>
 	<link rel="stylesheet" type="text/css" href="/static/css/main.css" />
 </head>
 <body>
-	<div id="header">
-		<p><a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></p>
+	<div id="main">
+		<div id="header">
+			<h1>This page has not been found</h1>
+			<span class="breadcrumb"><a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></span>
+		</div>
+		<div id="content">
+			<p><a href="/edit/{{ .PageName }}/">Click here to create the page.</p>
+		</div>
+		
+		<div id="footer">
+			<span>Simple Wiki</span>
+		</div>
 	</div>
-	<h1>This page has not been found</h1>
-	<p><a href="/edit/{{ .PageName }}/">Click here to create the page.</p>
 </body>
 </html>

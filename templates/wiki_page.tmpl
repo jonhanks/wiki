@@ -5,13 +5,14 @@
 	<link rel="stylesheet" type="text/css" href="/static/css/main.css" />
 </head>
 <body>
-	<div id="header">
-		<p>Wiki Page: {{ .PageName }} <a href="/edit/{{.PageName}}/">Edit this page</a> | <a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></p>
-	</div>
-	<div id="content">
-		{{ .Content }}
-	</div>
-	<div id="footer">
+	<div id="main">
+		<div id="header">
+			<h1>Wiki Page: {{ .PageName }}</h1>
+			<span class="breadcrumb"><a href="/edit/{{ .PageName }}/">Edit this page</a> | <a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></span>
+		</div>
+		<div id="content">
+			{{ .Content }}
+		</div>
 		<div id="attachments">
 			Attachments:
 			<ul>
@@ -20,11 +21,14 @@
 			{{ end }}
 			</ul>
 		</div>
-		Revisions: <a href="?rev=0">First</a> &lt;
+		<div id="footer">
+			Revisions: <a href="?rev=0">First</a> &lt;
 		{{ range .RevisionList }}
 			<a href="?rev={{ . }}">{{ . }}</a> &lt;
 		{{ end }}
 		<a href="?rev=-1">Current</a>
+			<span>Simple Wiki</span>
+		</div>
 	</div>
 </body>
 </html>
