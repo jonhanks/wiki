@@ -52,9 +52,13 @@ func (tInfo *testFDBFileInfo) Sys() interface{} { return nil }
 func TestWikiWordRe(t *testing.T) {
 	Convey("All WikiWords match a regexp", t, func() {
 		So(IsWikiWord("abcd"), ShouldBeFalse)
+		So(IsWikiWord("123"), ShouldBeFalse)
 		So(IsWikiWord("123Abc"), ShouldBeFalse)
 		So(IsWikiWord("abcDef"), ShouldBeFalse)
 		So(IsWikiWord("Abc+d3"), ShouldBeFalse)
+		So(IsWikiWord("Abc_Def"), ShouldBeTrue)
+		So(IsWikiWord("AbcD_ef"), ShouldBeTrue)
+		So(IsWikiWord("AbcD_123"), ShouldBeTrue)
 		So(IsWikiWord("Abc"), ShouldBeFalse)
 		So(IsWikiWord("Jonathan@Hanks"), ShouldBeFalse)
 		So(IsWikiWord("FirstLast"), ShouldBeTrue)
