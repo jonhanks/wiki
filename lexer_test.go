@@ -50,6 +50,7 @@ func TestLexerTextState(t *testing.T) {
 	input1 := []byte("abc def")
 	input2 := []byte("[][abc]")
 	input2a := []byte("[](abc)")
+	input2b := []byte("[]:")
 	input3 := []byte("![](abc)")
 	input3a := []byte("![][abc]")
 	input4 := []byte("efg!abc")
@@ -90,6 +91,18 @@ func TestLexerTextState(t *testing.T) {
 			nextState = nextState(l)
 			item = <-ch
 			So(item.Type, ShouldEqual, TokenLink)
+		})
+		Convey("Manually registering a link/reference should work too (as text)", func() {
+			l, ch = NewLexer(input2b)
+			nextState := textLexer(l)
+			item := <-ch
+			So(nextState, ShouldEqual, linkLexer)
+			So(item.Type, ShouldEqual, TokenText)
+			So(len(item.Value), ShouldEqual, 0)
+
+			nextState = nextState(l)
+			item = <-ch
+			So(item.Type, ShouldEqual, TokenText)
 		})
 		Convey("leading into a image", func() {
 			l, ch = NewLexer(input3)

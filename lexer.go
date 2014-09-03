@@ -253,6 +253,8 @@ func textLexer(l *Lexer) stageFunc {
 	return nil
 }
 
+// Match link type objects (images, links, and references)
+// []() or [][] or []:
 func linkMatcher(l *Lexer, Type LexToken) stageFunc {
 	var r rune
 	var err error
@@ -304,6 +306,9 @@ func linkMatcher(l *Lexer, Type LexToken) stageFunc {
 	case rune('['):
 		start = rune('[')
 		end = rune(']')
+	case rune(':'):
+		l.emit(TokenText)
+		return textLexer(l)
 	default:
 		fmt.Println("Did not find link/image body")
 		l.emit(TokenErr)
