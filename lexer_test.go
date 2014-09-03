@@ -206,7 +206,7 @@ func TestLexerImageState(t *testing.T) {
 	})
 }
 
-func testLexerRunLoop(t *testing.T) {
+func TestLexerRunLoop(t *testing.T) {
 	Convey("Create a lexer to test the run loop", t, func() {
 		l, ch := NewLexer([]byte("This is text with a WikiWord in it."))
 		Convey("We should be able to run the lexer", func() {

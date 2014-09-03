@@ -70,6 +70,7 @@ func (l *Lexer) Next() (rune, error) {
 			return result, nil
 		}
 	}
+	fmt.Println("Returning io.EOF!!!!!!!!!!")
 	return ' ', io.EOF
 }
 
@@ -99,8 +100,9 @@ func (l *Lexer) emit(Type LexToken) {
 	//fmt.Printf("'%s'\n", string(l.input))
 	item := LexedItem{Type: Type, Value: make([]byte, segLen)}
 	copy(item.Value, l.input[l.start:l.cur])
-	fmt.Printf("Index values %d %d\nEmitting '%s'\n", l.start, l.cur, string(item.Value))
+	fmt.Printf("Index values %d %d\nEmitting (%s) '%s'\n", l.start, l.cur, Type, string(item.Value))
 	l.start = l.cur
+	fmt.Println("Start advanced to", l.start)
 	l.ch <- item
 }
 
@@ -109,7 +111,7 @@ func (l *Lexer) saveLocation() int {
 }
 
 func (l *Lexer) jumpToLocation(pos int) error {
-	if pos < l.start || pos > len(l.input) {
+	if pos < l.start-1 || pos > len(l.input) {
 		return errors.New("location out of range")
 	}
 	l.cur = pos
@@ -119,6 +121,7 @@ func (l *Lexer) jumpToLocation(pos int) error {
 func (l *Lexer) Run() {
 	for state := textLexer; state != nil; {
 		state = state(l)
+		fmt.Println("Next lexer state is", state)
 	}
 	close(l.ch)
 }
@@ -147,7 +150,7 @@ func textLexer(l *Lexer) stageFunc {
 				fmt.Println("There is something earlier")
 				curPos := l.saveLocation()
 				if err := l.jumpToLocation(BeforeWikiWordStart); err != nil {
-					fmt.Println("Unable to jump to location")
+					fmt.Println("Unable to jump to location -", BeforeWikiWordStart, " start is ", l.start)
 				}
 				l.emit(TokenText)
 				fmt.Println("Returning to current")
@@ -159,6 +162,10 @@ func textLexer(l *Lexer) stageFunc {
 		} else {
 			l.emit(TokenText)
 		}
+		BeforeWikiWordStart = l.saveLocation()
+		resetWikiWord()
+		fmt.Println("Before advanced to ", BeforeWikiWordStart)
+		fmt.Println("leaving emitCurrent")
 	}
 
 	var r rune = ' '
@@ -177,24 +184,26 @@ func textLexer(l *Lexer) stageFunc {
 			l.emit(TokenErr)
 			return nil
 		}
-		fmt.Printf("%s %v %d\n", string(r), InWikiWord, BeforeWikiWordStart)
+		fmt.Printf("'%s' %v before:%d up:%d s:%d c:%d\n", string(r), InWikiWord, BeforeWikiWordStart, UpperCount, l.start, l.cur)
 
 		if InWikiWord {
 			if unicode.IsUpper(r) {
 				UpperCount++
 			}
 			if !(unicode.IsLetter(r) || unicode.IsDigit(r)) {
-				fmt.Printf("%s %v %v\n", string(r), unicode.IsLetter(r), unicode.IsDigit(r))
+				fmt.Printf("'%s' let:%v dig:%v\n", string(r), unicode.IsLetter(r), unicode.IsDigit(r))
 				// just left wiki word
 				if UpperCount >= 2 {
 					// This is a WikiWord
-					if BeforeWikiWordStart >= 0 {
-						l.Reverse(r)
-						emitCurrent()
-						l.Next()
-					}
+					//if BeforeWikiWordStart >= 0 {
+					l.Reverse(r)
+					emitCurrent()
+					// do not advance, we need to re-evaluate the rune, outside of the context of a wiki word
+					//l.Next()
+					//}
+				} else {
+					fmt.Println("Not a WikiWord")
 				}
-				fmt.Println("Not a WikiWord")
 				// reset wiki word variables
 				resetWikiWord()
 			}

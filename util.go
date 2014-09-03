@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -32,6 +34,42 @@ func ExtractWikiWords(input []byte) [][]byte {
 		results = append(results, []byte(key))
 	}
 	return results
+}
+
+func ExtrandAndExpandWikiWords(input []byte) []byte {
+	l, ch := NewLexer(input)
+	go l.Run()
+
+	buf := &bytes.Buffer{}
+
+	done := false
+	for !done {
+		item := <-ch
+		switch item.Type {
+		case TokenErr:
+			done = true
+		case TokenEOF:
+			fmt.Println("Got an EOF")
+			done = true
+		case TokenWikiWord:
+			buf.Write([]byte("["))
+			buf.Write(item.Value)
+			buf.Write([]byte("](/"))
+			buf.Write(item.Value)
+			buf.Write([]byte("/)"))
+		default:
+			buf.Write(item.Value)
+		}
+	}
+	fmt.Println("Returning ", buf.String())
+	return buf.Bytes()
+	//var processed []byte
+	//processed = input
+	//for _, wikiWord := range ExtractWikiWords(input) {
+	//	word := string(wikiWord)
+	//	processed = bytes.Replace(processed, wikiWord, []byte("["+word+"](/"+word+"/)"), -1)
+	//}
+	//return processed
 }
 
 func writeAndClose(wc io.WriteCloser, value []byte) error {

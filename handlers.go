@@ -64,10 +64,6 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 		templates["not_found"].Execute(w, &details)
 		return
 	}
-	if rawPage, err = page.GetData(revision); err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
 	details.AttachmentList, err = page.ListAttachments()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -76,10 +72,13 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 	details.CurrentRevision, minRevision, maxRevision = generateRevisionSplit(revision, revisionCount-1)
 	details.RevisionList = generateInt(minRevision, maxRevision)
 
-	for _, wikiWord := range ExtractWikiWords(rawPage) {
-		word := string(wikiWord)
-		rawPage = bytes.Replace(rawPage, wikiWord, []byte("["+word+"](/"+word+"/)"), -1)
+	if rawPage, err = page.GetData(revision); err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
+
+	rawPage = ExtrandAndExpandWikiWords(rawPage)
+
 	// inject attachment information here
 	buf := &bytes.Buffer{}
 
