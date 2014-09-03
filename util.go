@@ -21,22 +21,7 @@ func IsWikiWord(word string) bool {
 	return WIKIWORD_RE.MatchString(word)
 }
 
-// Given a block of text as a []byte, return the list of WikiWords
-func ExtractWikiWords(input []byte) [][]byte {
-	// FIXME,  The uniqueness set is funny, []byte -> string -> []byte bad
-	// potentially a lot of garbage
-	unique := make(map[string]bool)
-	for _, val := range WIKIWORD_RE.FindAll(input, -1) {
-		unique[string(val)] = true
-	}
-	results := make([][]byte, 0, len(unique))
-	for key, _ := range unique {
-		results = append(results, []byte(key))
-	}
-	return results
-}
-
-func ExtrandAndExpandWikiWords(input []byte) []byte {
+func ExpandWikiWords(input []byte) []byte {
 	l, ch := NewLexer(input)
 	go l.Run()
 
@@ -63,13 +48,6 @@ func ExtrandAndExpandWikiWords(input []byte) []byte {
 	}
 	fmt.Println("Returning ", buf.String())
 	return buf.Bytes()
-	//var processed []byte
-	//processed = input
-	//for _, wikiWord := range ExtractWikiWords(input) {
-	//	word := string(wikiWord)
-	//	processed = bytes.Replace(processed, wikiWord, []byte("["+word+"](/"+word+"/)"), -1)
-	//}
-	//return processed
 }
 
 func writeAndClose(wc io.WriteCloser, value []byte) error {

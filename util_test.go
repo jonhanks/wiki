@@ -67,32 +67,7 @@ func TestWikiWordRe(t *testing.T) {
 	})
 }
 
-func TestExtractWikiWords(t *testing.T) {
-	test0 := []byte("There are no wiki words in\nthis piece of text.")
-	test1 := []byte("There is only\nOneWikiWord in this text.")
-	test2 := []byte("Emily pointing to the CD player - This is where the CDEFG goes!")
-	test4 := []byte("OneWikiWord not a wiki word\nTwoWikiWord ThreeWikiWords\n FourWords")
-	testMulti := []byte("WordWordOne\nWordWord\n WordOne\nWordWordOne WordWordOne")
-
-	Convey("A string/[]byte may have multiple wikiwords in it", t, func() {
-		words0 := ExtractWikiWords(test0)
-		So(len(words0), ShouldEqual, 0)
-
-		words1 := ExtractWikiWords(test1)
-		So(len(words1), ShouldEqual, 1)
-
-		words2 := ExtractWikiWords(test2)
-		So(len(words2), ShouldEqual, 2)
-
-		words4 := ExtractWikiWords(test4)
-		So(len(words4), ShouldEqual, 4)
-
-		wordsMulti := ExtractWikiWords(testMulti)
-		So(len(wordsMulti), ShouldEqual, 3)
-	})
-}
-
-func TestExtractAndExpandWikiWords(t *testing.T) {
+func TestExpandWikiWords(t *testing.T) {
 	test0 := []byte("There are no wiki words in\nthis piece of text.")
 	test1 := []byte("There is only\nOneWikiWord in this text.")
 	test2 := []byte("Emily pointing to the CD player - This is where the CDEFG goes!")
@@ -109,23 +84,23 @@ func TestExtractAndExpandWikiWords(t *testing.T) {
 	//rawPage = bytes.Replace(rawPage, wikiWord, []byte("["+word+"](/"+word+"/)"), -1)
 	Convey("We must expand WikiWords to markdown links", t, func() {
 		fmt.Println("Test4")
-		out4 := ExtrandAndExpandWikiWords(test4)
+		out4 := ExpandWikiWords(test4)
 		So(string(out4), ShouldEqual, string(expected4))
 
 		fmt.Println("TestMulti")
-		outMulti := ExtrandAndExpandWikiWords(testMulti)
+		outMulti := ExpandWikiWords(testMulti)
 		So(string(outMulti), ShouldEqual, string(expectedMulti))
 
 		fmt.Println("Test0")
-		out0 := ExtrandAndExpandWikiWords(test0)
+		out0 := ExpandWikiWords(test0)
 		So(string(out0), ShouldEqual, string(expected0))
 
 		fmt.Println("Test1")
-		out1 := ExtrandAndExpandWikiWords(test1)
+		out1 := ExpandWikiWords(test1)
 		So(string(out1), ShouldEqual, string(expected1))
 
 		fmt.Println("Test2")
-		out2 := ExtrandAndExpandWikiWords(test2)
+		out2 := ExpandWikiWords(test2)
 		So(string(out2), ShouldEqual, string(expected2))
 
 	})

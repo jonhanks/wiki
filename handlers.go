@@ -77,7 +77,7 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 		return
 	}
 
-	rawPage = ExtrandAndExpandWikiWords(rawPage)
+	rawPage = ExpandWikiWords(rawPage)
 
 	// inject attachment information here
 	buf := &bytes.Buffer{}
