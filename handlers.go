@@ -83,9 +83,10 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 	buf := &bytes.Buffer{}
 
 	for _, attachment := range details.AttachmentList {
-		buf.WriteString("[" + attachment + "]: ./" + attachment + "\n")
+		buf.WriteString("[" + attachment + "]: " + r.URL.String() + attachment + "\n")
 	}
 	buf.Write(rawPage)
+
 	details.Content = template.HTML(string(blackfriday.MarkdownCommon(buf.Bytes())))
 	templates["wiki_page"].Execute(w, &details)
 }
