@@ -234,6 +234,7 @@ func textLexer(l *Lexer) stageFunc {
 					l.emit(TokenEOF)
 					return nil
 				}
+				fmt.Println("Error: ", err)
 				l.start = l.cur
 				l.emit(TokenErr)
 				return nil
@@ -252,43 +253,80 @@ func textLexer(l *Lexer) stageFunc {
 	return nil
 }
 
-func linkMatcher(l *Lexer, Type LexToken, startRunes, endRunes [2]rune) stageFunc {
+func linkMatcher(l *Lexer, Type LexToken) stageFunc {
 	var r rune
 	var err error
-	// links are of the form [...][...] or []() so run through
-	// this loop twice, each one matches [...] or ()
-	// the delimiters are specified in startRunes and endRunes
-	for i := 0; i < 2; i++ {
-		if r, err = l.Next(); err != nil || r != startRunes[i] {
+
+	matcher := func(startRune, endRune rune) bool {
+		if r, err = l.Next(); err != nil || r != startRune {
 			l.start = l.cur
+			fmt.Printf("Did not find matching '%s' for link type got '%s'.\n", string(startRune), string(r))
 			l.emit(TokenErr)
-			return nil
+			return false
 		}
 		for {
 			r, err = l.Next()
 			if err != nil {
 				l.start = l.cur
 				l.emit(TokenErr)
-				return nil
+				return false
 			}
-			if r == endRunes[i] {
+			if r == endRune {
 				break
 			}
 		}
+		return true
+	}
+
+	// links are of the form [...][...] or []() so run through
+	// this loop twice, each one matches [...] or ()
+
+	//always look [] first
+	if !matcher(rune('['), rune(']')) {
+		return nil
+	}
+	// peek to see if we have '[' or '('
+	r, err = l.Next()
+	if err != nil {
+		if err == io.EOF {
+			l.emit(TokenText)
+			l.emit(TokenEOF)
+		} else {
+			l.emit(TokenErr)
+		}
+		return nil
+	}
+	var start, end rune
+	switch r {
+	case rune('('):
+		start = rune('(')
+		end = rune(')')
+	case rune('['):
+		start = rune('[')
+		end = rune(']')
+	default:
+		fmt.Println("Did not find link/image body")
+		l.emit(TokenErr)
+		return nil
+	}
+	l.Reverse(r)
+	if !matcher(start, end) {
+		return nil
 	}
 	l.emit(Type)
 	return textLexer
 }
 
 func linkLexer(l *Lexer) stageFunc {
-	return linkMatcher(l, TokenLink, [2]rune{'[', '['}, [2]rune{']', ']'})
+	return linkMatcher(l, TokenLink)
 }
 
 func imageLexer(l *Lexer) stageFunc {
 	if r, err := l.Next(); err != nil || r != '!' {
 		l.start = l.cur
+		fmt.Println("No ! found for image")
 		l.emit(TokenErr)
 		return nil
 	}
-	return linkMatcher(l, TokenImage, [2]rune{'[', '('}, [2]rune{']', ')'})
+	return linkMatcher(l, TokenImage)
 }

@@ -49,7 +49,9 @@ func TestLexerReverse(t *testing.T) {
 func TestLexerTextState(t *testing.T) {
 	input1 := []byte("abc def")
 	input2 := []byte("[][abc]")
+	input2a := []byte("[](abc)")
 	input3 := []byte("![](abc)")
+	input3a := []byte("![][abc]")
 	input4 := []byte("efg!abc")
 	input5 := []byte("efg!abc!")
 
@@ -72,6 +74,22 @@ func TestLexerTextState(t *testing.T) {
 			So(nextState, ShouldEqual, linkLexer)
 			So(item.Type, ShouldEqual, TokenText)
 			So(len(item.Value), ShouldEqual, 0)
+
+			nextState = nextState(l)
+			item = <-ch
+			So(item.Type, ShouldEqual, TokenLink)
+		})
+		Convey("Using a regular (non-wiki link) should work as well", func() {
+			l, ch = NewLexer(input2a)
+			nextState := textLexer(l)
+			item := <-ch
+			So(nextState, ShouldEqual, linkLexer)
+			So(item.Type, ShouldEqual, TokenText)
+			So(len(item.Value), ShouldEqual, 0)
+
+			nextState = nextState(l)
+			item = <-ch
+			So(item.Type, ShouldEqual, TokenLink)
 		})
 		Convey("leading into a image", func() {
 			l, ch = NewLexer(input3)
@@ -80,6 +98,22 @@ func TestLexerTextState(t *testing.T) {
 			So(nextState, ShouldEqual, imageLexer)
 			So(item.Type, ShouldEqual, TokenText)
 			So(len(item.Value), ShouldEqual, 0)
+
+			nextState = nextState(l)
+			item = <-ch
+			So(item.Type, ShouldEqual, TokenImage)
+		})
+		Convey("leading into a image (referenced)", func() {
+			l, ch = NewLexer(input3a)
+			nextState := textLexer(l)
+			item := <-ch
+			So(nextState, ShouldEqual, imageLexer)
+			So(item.Type, ShouldEqual, TokenText)
+			So(len(item.Value), ShouldEqual, 0)
+
+			nextState = nextState(l)
+			item = <-ch
+			So(item.Type, ShouldEqual, TokenImage)
 		})
 		Convey("testing text ending with an !", func() {
 			l, ch = NewLexer(input4)
