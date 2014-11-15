@@ -32,7 +32,7 @@ func main() {
 	r.HandleFunc("/edit/{name}/", adapt(r, wikiF, ShowEditPageHandler)).Methods("GET")
 	r.HandleFunc("/edit/{name}/", adapt(r, wikiF, EditPageHandler)).Methods("POST")
 	r.HandleFunc("/edit/:name/attachment/", adapt(r, wikiF, AddAttachmentHandler)).Methods("POST")
-	r.HandleFunc("/{name}", adapt(r, wikiF, PageHandler)).Methods("GET")
+	r.HandleFunc("/{name}/", adapt(r, wikiF, PageHandler)).Methods("GET")
 	r.HandleFunc("/{name}/{attachment}", adapt(r, wikiF, AttachmentHandler)).Methods("GET")
 
 	http.ListenAndServe(":3000", r)

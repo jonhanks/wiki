@@ -34,6 +34,8 @@ func AboutPageHandler(params map[string]string, wiki func() DB, w http.ResponseW
 func PageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 
+	fmt.Println("PageHandler ", PageName)
+
 	var rawPage []byte
 	var details struct {
 		PageName        string
