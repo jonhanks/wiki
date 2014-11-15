@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/codegangsta/martini"
 	"github.com/russross/blackfriday"
 	"html/template"
 	"io"
@@ -20,7 +19,7 @@ func init() {
 	}
 }
 
-func ListPagesHandler(wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func ListPagesHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	var details struct {
 		Pages []string
 	}
@@ -28,11 +27,11 @@ func ListPagesHandler(wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	templates["list_pages"].Execute(w, &details)
 }
 
-func AboutPageHandler(w http.ResponseWriter, r *http.Request) {
+func AboutPageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	templates["about_page"].Execute(w, nil)
 }
 
-func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func PageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 
 	var rawPage []byte
@@ -91,7 +90,7 @@ func PageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r
 	templates["wiki_page"].Execute(w, &details)
 }
 
-func AttachmentHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func AttachmentHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 	AttachmentName := params["attachment"]
 
@@ -114,7 +113,7 @@ func AttachmentHandler(params martini.Params, wiki func() DB, w http.ResponseWri
 	io.Copy(w, stream)
 }
 
-func AddAttachmentHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func AddAttachmentHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 
 	page, err := wiki().GetPage(PageName)
@@ -140,7 +139,7 @@ func AddAttachmentHandler(params martini.Params, wiki func() DB, w http.Response
 	http.Redirect(w, r, "/edit/"+PageName+"/", http.StatusFound)
 }
 
-func ShowEditPageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func ShowEditPageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 
 	fmt.Println("ShowEditPageHandler ", PageName)
@@ -175,7 +174,7 @@ func ShowEditPageHandler(params martini.Params, wiki func() DB, w http.ResponseW
 	templates["edit_page"].Execute(w, &details)
 }
 
-func EditPageHandler(params martini.Params, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func EditPageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	PageName := params["name"]
 
 	if err := r.ParseForm(); err != nil {

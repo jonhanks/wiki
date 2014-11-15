@@ -1,7 +1,7 @@
 wiki
 ====
 
-A simple Go  based wiki.  This is being done because each OS X upgrade breaks my apache (and thus my moin moin install) and to provide a test project for using some go toolkits and libraries (Martini and GoConvey).
+A simple Go  based wiki.  This is being done because each OS X upgrade breaks my apache (and thus my moin moin install) and to provide a test project for using some go toolkits and libraries (Gorilla web toolkit) and GoConvey).
 
 Basic goals:
 
@@ -18,13 +18,13 @@ Current Status:
     * Automatically setup links between pages
     * Pages have a history
     * Old page revisions can be viewed
+	* Attachments and basic image support works    
 
 Todo
 
 * Users
 * Modular authentication
-* Attachments & images
-* sql backend
+* LMDB/BoltDB backend
 * categories/tags/...
 * typing in some scripting/templating for use in pages ?
 * make some decent page templates

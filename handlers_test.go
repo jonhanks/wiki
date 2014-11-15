@@ -18,7 +18,7 @@ func TestAboutPageHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to create test request")
 		}
-		AboutPageHandler(record, req)
+		AboutPageHandler(make(map[string]string), nil, record, req)
 		So(record.Code, ShouldEqual, http.StatusOK)
 	})
 }
@@ -41,7 +41,7 @@ func TestListPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			ListPagesHandler(f, record, req)
+			ListPagesHandler(make(map[string]string), f, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 		})
 	})
