@@ -18,7 +18,7 @@ var WIKIWORD_ONLY_RE = regexp.MustCompile(_WIKIWORD_ONLY_RE)
 
 // Is the given string a WikiWord
 func IsWikiWord(word string) bool {
-	return WIKIWORD_RE.MatchString(word)
+	return WIKIWORD_ONLY_RE.MatchString(word)
 }
 
 func ExpandWikiWords(input []byte) []byte {
