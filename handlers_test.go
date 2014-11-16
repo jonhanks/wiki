@@ -18,7 +18,7 @@ func TestAboutPageHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to create test request")
 		}
-		AboutPageHandler(make(map[string]string), nil, record, req)
+		AboutPageHandler(&RequestInfo{Params: make(map[string]string)}, nil, record, req)
 		So(record.Code, ShouldEqual, http.StatusOK)
 	})
 }
@@ -41,7 +41,7 @@ func TestListPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			ListPagesHandler(make(map[string]string), f, record, req)
+			ListPagesHandler(&RequestInfo{Params: make(map[string]string)}, f, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 		})
 	})
@@ -64,7 +64,7 @@ func TestPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			PageHandler(map[string]string{"name": "PageOne"}, f, record, req)
+			PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 
 			Convey("Testing various revisions", func() {
@@ -74,7 +74,7 @@ func TestPageHandler(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Unable to create test request")
 					}
-					PageHandler(map[string]string{"name": "PageOne"}, f, record, req)
+					PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
 					if i <= 1 {
 						So(record.Code, ShouldEqual, http.StatusOK)
 					} else {
@@ -89,7 +89,7 @@ func TestPageHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				PageHandler(map[string]string{"name": "Invalid"}, f, record, req)
+				PageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}}, f, record, req)
 				So(record.Code, ShouldEqual, http.StatusNotFound)
 			})
 
@@ -99,7 +99,7 @@ func TestPageHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				PageHandler(map[string]string{"name": "WhichPage"}, f, record, req)
+				PageHandler(&RequestInfo{Params: map[string]string{"name": "WhichPage"}}, f, record, req)
 				So(record.Code, ShouldEqual, http.StatusOK)
 			})
 		})
@@ -123,7 +123,7 @@ func TestAttachmentHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			AttachmentHandler(map[string]string{"name": "PageOne", "attachment": "test.txt"}, f, record, req)
+			AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "PageOne", "attachment": "test.txt"}}, f, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 
 			Convey("Testing for a non-existant attachment should give an error", func() {
@@ -132,7 +132,7 @@ func TestAttachmentHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				AttachmentHandler(map[string]string{"name": "PageOne", "attachment": "missing.txt"}, f, record, req)
+				AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "PageOne", "attachment": "missing.txt"}}, f, record, req)
 				So(record.Code, ShouldEqual, http.StatusNotFound)
 
 				Convey("Testing for a non-existant page should give an error", func() {
@@ -141,7 +141,7 @@ func TestAttachmentHandler(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Unable to create test request")
 					}
-					AttachmentHandler(map[string]string{"name": "Invalid", "attachment": "test.txt"}, f, record, req)
+					AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "Invalid", "attachment": "test.txt"}}, f, record, req)
 					So(record.Code, ShouldEqual, http.StatusNotFound)
 				})
 			})
@@ -167,7 +167,7 @@ func TestShowEditPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			ShowEditPageHandler(map[string]string{"name": "PageOne"}, f, record, req)
+			ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 
 			Convey("Testing for a page with an invalid page name should give an error", func() {
@@ -176,7 +176,7 @@ func TestShowEditPageHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				ShowEditPageHandler(map[string]string{"name": "Invalid"}, f, record, req)
+				ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}}, f, record, req)
 				So(record.Code, ShouldEqual, http.StatusNotFound)
 
 				Convey("Editing a non-existant page (with a valid name) should work fine", func() {
@@ -185,7 +185,7 @@ func TestShowEditPageHandler(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Unable to create test request")
 					}
-					ShowEditPageHandler(map[string]string{"name": "NotYetCreated"}, f, record, req)
+					ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "NotYetCreated"}}, f, record, req)
 					So(record.Code, ShouldEqual, http.StatusOK)
 				})
 			})
@@ -209,7 +209,7 @@ func TestEditPageHandler(t *testing.T) {
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		EditPageHandler(map[string]string{"name": "PageOne"}, f, record, req)
+		EditPageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
 		So(record.Code, ShouldEqual, http.StatusFound)
 
 		Convey("The wiki page count should be one", func() {

@@ -9,6 +9,7 @@
 		<div id="header">
 			<h1>About the Wiki</h1>
 			<span class="breadcrumb"><a href="/">List Pages</a></span>
+			<span class="breadcrumb">Hello {{ .ReqInfo.User }}</span>
 		</div>
 		<div id="content">
 			<p>This is a simple <a href="http://golang.org">go</a> based wiki.  It is a personal project of Jonathan Hanks to have a simple wiki with little not no outside dependancies (including webservers and runtimes) so that it can withstand OS upgrades and migrations.</p>
@@ -20,7 +21,7 @@
 			<p><a href="http://golang.org">Google's Go</a> provides a wonderful platform to build network based and concurrent systems.  Go is the implementation language of this wiki.</p>
 
 			<h3>BlackFriday</h3>
-			<p>The Markdown processor from <a href="github.com/russross/blackfriday">github.com/russross/blackfriday</a>.</p>
+			<p>The Markdown processor from <a href="http://github.com/russross/blackfriday">github.com/russross/blackfriday</a>.</p>
 			<p><pre>
 > Copyright © 2011 Russ Ross. All rights reserved.
 > 
@@ -88,7 +89,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 </pre></p>
 
 			<h3>GoConvey</h3>
-			<p>The GoConvey project from <a href="github.com/smartystreets/goconvey/convey">github.com/smartystreets/goconvey/convey</a> is used as the test framework to validate the implementation.</p>
+			<p>The GoConvey project from <a href="http://github.com/smartystreets/goconvey">github.com/smartystreets/goconvey</a> is used as the test framework to validate the implementation.</p>
 
 			<p><pre>Copyright (c) 2013 SmartyStreets, LLC
 
@@ -115,7 +116,8 @@ requirements and restrictions.  Use of those components is subject to the terms
 and conditions outlined the respective license of each component.</pre></p>
 		</div>
 		<div id="footer">
-			<span>Simple Wiki</span>
+			<span>Simple Wiki</span><br/>
+			<span>{{ range .ReqInfo.User.Roles }}{{ . }} {{ end }}</span>
 		</div>
 	</div>
 </body>

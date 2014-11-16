@@ -8,9 +8,9 @@ import (
 
 var wiki DB
 
-func adapt(r *mux.Router, wikiF func() DB, f func(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+func adapt(r *mux.Router, wikiF func() DB, f func(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return NewLoggingMiddleware(os.Stdout, func(w http.ResponseWriter, r *http.Request) {
-		f(mux.Vars(r), wikiF, w, r)
+		f(&RequestInfo{Params: mux.Vars(r), User: &UserInfo{}}, wikiF, w, r)
 	})
 }
 

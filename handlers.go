@@ -19,20 +19,26 @@ func init() {
 	}
 }
 
-func ListPagesHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func ListPagesHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
 	var details struct {
-		Pages []string
+		Pages   []string
+		ReqInfo *RequestInfo
 	}
 	details.Pages, _ = wiki().ListPages()
+	details.ReqInfo = reqInfo
 	templates["list_pages"].Execute(w, &details)
 }
 
-func AboutPageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
-	templates["about_page"].Execute(w, nil)
+func AboutPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	var details struct {
+		ReqInfo *RequestInfo
+	}
+	details.ReqInfo = reqInfo
+	templates["about_page"].Execute(w, &details)
 }
 
-func PageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
-	PageName := params["name"]
+func PageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	PageName := reqInfo.Params["name"]
 
 	fmt.Println("PageHandler ", PageName)
 
@@ -43,9 +49,12 @@ func PageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter
 		CurrentRevision int
 		AttachmentList  []string
 		RevisionList    <-chan int
+		ReqInfo         *RequestInfo
 	}
 	var err error
 	var minRevision, maxRevision int
+
+	details.ReqInfo = reqInfo
 
 	revision := CURRENT_REVISION
 	if revision, err = strconv.Atoi(r.FormValue("rev")); err != nil {
@@ -92,9 +101,9 @@ func PageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter
 	templates["wiki_page"].Execute(w, &details)
 }
 
-func AttachmentHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
-	PageName := params["name"]
-	AttachmentName := params["attachment"]
+func AttachmentHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	PageName := reqInfo.Params["name"]
+	AttachmentName := reqInfo.Params["attachment"]
 
 	page, err := wiki().GetPage(PageName)
 	if err != nil {
@@ -115,8 +124,8 @@ func AttachmentHandler(params map[string]string, wiki func() DB, w http.Response
 	io.Copy(w, stream)
 }
 
-func AddAttachmentHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
-	PageName := params["name"]
+func AddAttachmentHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	PageName := reqInfo.Params["name"]
 
 	page, err := wiki().GetPage(PageName)
 	if err != nil {
@@ -141,8 +150,8 @@ func AddAttachmentHandler(params map[string]string, wiki func() DB, w http.Respo
 	http.Redirect(w, r, "/edit/"+PageName+"/", http.StatusFound)
 }
 
-func ShowEditPageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
-	PageName := params["name"]
+func ShowEditPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	PageName := reqInfo.Params["name"]
 
 	fmt.Println("ShowEditPageHandler ", PageName)
 
@@ -150,8 +159,10 @@ func ShowEditPageHandler(params map[string]string, wiki func() DB, w http.Respon
 		PageName       string
 		PageSrc        string
 		AttachmentList []string
+		ReqInfo        *RequestInfo
 	}
 	details.PageName = PageName
+	details.ReqInfo = reqInfo
 
 	page, err := wiki().GetPage(PageName)
 	if err != nil {
@@ -176,8 +187,8 @@ func ShowEditPageHandler(params map[string]string, wiki func() DB, w http.Respon
 	templates["edit_page"].Execute(w, &details)
 }
 
-func EditPageHandler(params map[string]string, wiki func() DB, w http.ResponseWriter, r *http.Request) {
-	PageName := params["name"]
+func EditPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+	PageName := reqInfo.Params["name"]
 
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
