@@ -2,17 +2,13 @@ package main
 
 import (
 	"github.com/gorilla/mux"
+	"github.com/jonhanks/middleware"
+	"github.com/justinas/alice"
 	"net/http"
 	"os"
 )
 
 var wiki DB
-
-func adapt(r *mux.Router, wikiF func() DB, f func(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
-	return NewLoggingMiddleware(os.Stdout, func(w http.ResponseWriter, r *http.Request) {
-		f(&RequestInfo{Params: mux.Vars(r), User: &UserInfo{}}, wikiF, w, r)
-	})
-}
 
 func main() {
 	var err error
@@ -25,20 +21,18 @@ func main() {
 		panic(err.Error())
 	}
 
-	wikiF := func() DB {
-		return wiki
-	}
+	stdMw := alice.New(middleware.MustGet("middleware.LoggingStdOut"), middleware.MustGet("middleware.Panic"))
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", adapt(r, wikiF, ListPagesHandler)).Methods("GET")
-	r.HandleFunc("/About/", adapt(r, wikiF, AboutPageHandler)).Methods("GET")
+	r.Handle("/", stdMw.Then(adapt(wiki, ListPagesHandler))).Methods("GET")
+	r.Handle("/About/", stdMw.Then(adapt(wiki, AboutPageHandler))).Methods("GET")
 	r.Handle("/static/{path:.*}", http.FileServer(http.Dir("public/")))
-	r.HandleFunc("/edit/{name}/", adapt(r, wikiF, ShowEditPageHandler)).Methods("GET")
-	r.HandleFunc("/edit/{name}/", adapt(r, wikiF, EditPageHandler)).Methods("POST")
-	r.HandleFunc("/edit/:name/attachment/", adapt(r, wikiF, AddAttachmentHandler)).Methods("POST")
-	r.HandleFunc("/{name}/", adapt(r, wikiF, PageHandler)).Methods("GET")
-	r.HandleFunc("/{name}/{attachment}", adapt(r, wikiF, AttachmentHandler)).Methods("GET")
+	r.Handle("/edit/{name}/", stdMw.Then(adapt(wiki, ShowEditPageHandler))).Methods("GET")
+	r.Handle("/edit/{name}/", stdMw.Then(adapt(wiki, EditPageHandler))).Methods("POST")
+	r.Handle("/edit/:name/attachment/", stdMw.Then(adapt(wiki, AddAttachmentHandler))).Methods("POST")
+	r.Handle("/{name}/", stdMw.Then(adapt(wiki, PageHandler))).Methods("GET")
+	r.Handle("/{name}/{attachment}", stdMw.Then(adapt(wiki, AttachmentHandler))).Methods("GET")
 
 	os.Stdout.WriteString("Staring wiki at " + endpoint + "\n")
 	http.ListenAndServe(endpoint, r)

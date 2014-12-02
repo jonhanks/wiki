@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	//"github.com/gorilla/context"
+	"github.com/gorilla/mux"
 	"github.com/russross/blackfriday"
 	"html/template"
 	"io"
@@ -19,17 +21,26 @@ func init() {
 	}
 }
 
-func ListPagesHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func adapt(wikiDb DB, f func(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request)) http.Handler {
+
+	var adapter http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		f(&RequestInfo{Params: mux.Vars(r), User: &UserInfo{}, DB: wikiDb}, w, r)
+	}
+
+	return adapter
+}
+
+func ListPagesHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	var details struct {
 		Pages   []string
 		ReqInfo *RequestInfo
 	}
-	details.Pages, _ = wiki().ListPages()
+	details.Pages, _ = reqInfo.DB.ListPages()
 	details.ReqInfo = reqInfo
 	templates["list_pages"].Execute(w, &details)
 }
 
-func AboutPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func AboutPageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	var details struct {
 		ReqInfo *RequestInfo
 	}
@@ -37,7 +48,7 @@ func AboutPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWrite
 	templates["about_page"].Execute(w, &details)
 }
 
-func PageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func PageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	PageName := reqInfo.Params["name"]
 
 	fmt.Println("PageHandler ", PageName)
@@ -63,7 +74,7 @@ func PageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r 
 
 	details.PageName = PageName
 
-	page, err := wiki().GetPage(PageName)
+	page, err := reqInfo.DB.GetPage(PageName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -101,11 +112,11 @@ func PageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r 
 	templates["wiki_page"].Execute(w, &details)
 }
 
-func AttachmentHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func AttachmentHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	PageName := reqInfo.Params["name"]
 	AttachmentName := reqInfo.Params["attachment"]
 
-	page, err := wiki().GetPage(PageName)
+	page, err := reqInfo.DB.GetPage(PageName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -124,10 +135,10 @@ func AttachmentHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWrit
 	io.Copy(w, stream)
 }
 
-func AddAttachmentHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func AddAttachmentHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	PageName := reqInfo.Params["name"]
 
-	page, err := wiki().GetPage(PageName)
+	page, err := reqInfo.DB.GetPage(PageName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -150,7 +161,7 @@ func AddAttachmentHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseW
 	http.Redirect(w, r, "/edit/"+PageName+"/", http.StatusFound)
 }
 
-func ShowEditPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func ShowEditPageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	PageName := reqInfo.Params["name"]
 
 	fmt.Println("ShowEditPageHandler ", PageName)
@@ -164,7 +175,7 @@ func ShowEditPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWr
 	details.PageName = PageName
 	details.ReqInfo = reqInfo
 
-	page, err := wiki().GetPage(PageName)
+	page, err := reqInfo.DB.GetPage(PageName)
 	if err != nil {
 		fmt.Println(err)
 		w.WriteHeader(http.StatusNotFound)
@@ -187,7 +198,7 @@ func ShowEditPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWr
 	templates["edit_page"].Execute(w, &details)
 }
 
-func EditPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter, r *http.Request) {
+func EditPageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	PageName := reqInfo.Params["name"]
 
 	if err := r.ParseForm(); err != nil {
@@ -196,7 +207,7 @@ func EditPageHandler(reqInfo *RequestInfo, wiki func() DB, w http.ResponseWriter
 	}
 	src := r.FormValue("entry")
 
-	page, err := wiki().GetPage(PageName)
+	page, err := reqInfo.DB.GetPage(PageName)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

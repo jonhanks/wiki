@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 	"time"
@@ -145,7 +144,7 @@ func TestLexerTextState(t *testing.T) {
 			So(bytes.Compare(item.Value, input5), ShouldEqual, 0)
 		})
 		Convey("testing text that is only a wiki word", func() {
-			fmt.Println("666666666666666")
+			//fmt.Println("666666666666666")
 			l, ch = NewLexer(input6)
 			nextState = textLexer(l)
 			item = <-ch
@@ -154,7 +153,7 @@ func TestLexerTextState(t *testing.T) {
 			So(bytes.Compare(item.Value, input6), ShouldEqual, 0)
 		})
 		Convey("testing text with a wiki word at the end", func() {
-			fmt.Println("777777777777777")
+			//fmt.Println("777777777777777")
 			l, ch = NewLexer(input7)
 			nextState = textLexer(l)
 			So(nextState, ShouldEqual, nil)
@@ -162,16 +161,16 @@ func TestLexerTextState(t *testing.T) {
 			item = <-ch
 			So(item.Type, ShouldEqual, TokenText)
 			So(bytes.Compare(item.Value, []byte("abc ")), ShouldEqual, 0)
-			fmt.Printf("Expecting 'abc' %s - %s\n", string(input7), string(item.Value))
+			//fmt.Printf("Expecting 'abc' %s - %s\n", string(input7), string(item.Value))
 
 			item = <-ch
 			So(item.Type, ShouldEqual, TokenWikiWord)
 			So(bytes.Compare(item.Value, []byte("WikiWord")), ShouldEqual, 0)
-			fmt.Printf("Expecting 'WikiWord' %s - %s\n", string(input7), string(item.Value))
-			fmt.Println("----------------")
+			//fmt.Printf("Expecting 'WikiWord' %s - %s\n", string(input7), string(item.Value))
+			//fmt.Println("----------------")
 		})
 		Convey("testing text with a wiki word in the middle", func() {
-			fmt.Println("888888888888888")
+			//fmt.Println("888888888888888")
 			l, ch = NewLexer(input8)
 			nextState = textLexer(l)
 			So(nextState, ShouldEqual, nil)
@@ -185,7 +184,7 @@ func TestLexerTextState(t *testing.T) {
 			item = <-ch
 			So(item.Type, ShouldEqual, TokenText)
 			So(bytes.Compare(item.Value, []byte(" def")), ShouldEqual, 0)
-			fmt.Println("----------------")
+			//fmt.Println("----------------")
 		})
 	})
 }

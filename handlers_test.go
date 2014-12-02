@@ -10,6 +10,20 @@ import (
 	"testing"
 )
 
+func TestAdapter(t *testing.T) {
+	Convey("The adapt function makes the custom handler type into a http.HandlerFunc type", t, func() {
+		f := adapt(wiki, AboutPageHandler)
+		So(f, ShouldNotBeNil)
+
+		Convey("The returned handler will pass onto the final handler if it can get all the pices", func() {
+			record := httptest.NewRecorder()
+			req, err := http.NewRequest("GET", "/about/", nil)
+			So(err, ShouldBeNil)
+			So(func() { f.ServeHTTP(record, req) }, ShouldNotPanic)
+		})
+	})
+}
+
 func TestAboutPageHandler(t *testing.T) {
 
 	Convey("Test the about page handler, checking the responses", t, func() {
@@ -18,16 +32,13 @@ func TestAboutPageHandler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to create test request")
 		}
-		AboutPageHandler(&RequestInfo{Params: make(map[string]string)}, nil, record, req)
+		AboutPageHandler(&RequestInfo{Params: make(map[string]string)}, record, req)
 		So(record.Code, ShouldEqual, http.StatusOK)
 	})
 }
 
 func TestListPageHandler(t *testing.T) {
 	wiki, _ := newMemDB()
-	f := func() DB {
-		return wiki
-	}
 
 	Convey("First we create a wiki database", t, func() {
 		page, _ := wiki.GetPage("PageOne")
@@ -41,7 +52,7 @@ func TestListPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			ListPagesHandler(&RequestInfo{Params: make(map[string]string)}, f, record, req)
+			ListPagesHandler(&RequestInfo{Params: make(map[string]string), DB: wiki}, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 		})
 	})
@@ -49,10 +60,6 @@ func TestListPageHandler(t *testing.T) {
 
 func TestPageHandler(t *testing.T) {
 	wiki, _ := newMemDB()
-	f := func() DB {
-		return wiki
-	}
-
 	Convey("First we create a wiki database", t, func() {
 		page, _ := wiki.GetPage("PageOne")
 		page.AddRevision([]byte("AbcDef"))
@@ -64,7 +71,7 @@ func TestPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
+			PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 
 			Convey("Testing various revisions", func() {
@@ -74,7 +81,7 @@ func TestPageHandler(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Unable to create test request")
 					}
-					PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
+					PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
 					if i <= 1 {
 						So(record.Code, ShouldEqual, http.StatusOK)
 					} else {
@@ -89,7 +96,7 @@ func TestPageHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				PageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}}, f, record, req)
+				PageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}, DB: wiki}, record, req)
 				So(record.Code, ShouldEqual, http.StatusNotFound)
 			})
 
@@ -99,7 +106,7 @@ func TestPageHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				PageHandler(&RequestInfo{Params: map[string]string{"name": "WhichPage"}}, f, record, req)
+				PageHandler(&RequestInfo{Params: map[string]string{"name": "WhichPage"}, DB: wiki}, record, req)
 				So(record.Code, ShouldEqual, http.StatusOK)
 			})
 		})
@@ -108,9 +115,6 @@ func TestPageHandler(t *testing.T) {
 
 func TestAttachmentHandler(t *testing.T) {
 	wiki, _ := newMemDB()
-	f := func() DB {
-		return wiki
-	}
 
 	Convey("First we create a wiki database", t, func() {
 		page, _ := wiki.GetPage("PageOne")
@@ -123,7 +127,7 @@ func TestAttachmentHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "PageOne", "attachment": "test.txt"}}, f, record, req)
+			AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "PageOne", "attachment": "test.txt"}, DB: wiki}, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 
 			Convey("Testing for a non-existant attachment should give an error", func() {
@@ -132,7 +136,7 @@ func TestAttachmentHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "PageOne", "attachment": "missing.txt"}}, f, record, req)
+				AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "PageOne", "attachment": "missing.txt"}, DB: wiki}, record, req)
 				So(record.Code, ShouldEqual, http.StatusNotFound)
 
 				Convey("Testing for a non-existant page should give an error", func() {
@@ -141,7 +145,7 @@ func TestAttachmentHandler(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Unable to create test request")
 					}
-					AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "Invalid", "attachment": "test.txt"}}, f, record, req)
+					AttachmentHandler(&RequestInfo{Params: map[string]string{"name": "Invalid", "attachment": "test.txt"}, DB: wiki}, record, req)
 					So(record.Code, ShouldEqual, http.StatusNotFound)
 				})
 			})
@@ -151,9 +155,6 @@ func TestAttachmentHandler(t *testing.T) {
 
 func TestShowEditPageHandler(t *testing.T) {
 	wiki, _ := newMemDB()
-	f := func() DB {
-		return wiki
-	}
 
 	Convey("First we create a wiki database", t, func() {
 		page, _ := wiki.GetPage("PageOne")
@@ -167,7 +168,7 @@ func TestShowEditPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
-			ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
+			ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 
 			Convey("Testing for a page with an invalid page name should give an error", func() {
@@ -176,7 +177,7 @@ func TestShowEditPageHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
-				ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}}, f, record, req)
+				ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}, DB: wiki}, record, req)
 				So(record.Code, ShouldEqual, http.StatusNotFound)
 
 				Convey("Editing a non-existant page (with a valid name) should work fine", func() {
@@ -185,7 +186,7 @@ func TestShowEditPageHandler(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Unable to create test request")
 					}
-					ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "NotYetCreated"}}, f, record, req)
+					ShowEditPageHandler(&RequestInfo{Params: map[string]string{"name": "NotYetCreated"}, DB: wiki}, record, req)
 					So(record.Code, ShouldEqual, http.StatusOK)
 				})
 			})
@@ -195,9 +196,6 @@ func TestShowEditPageHandler(t *testing.T) {
 
 func TestEditPageHandler(t *testing.T) {
 	wiki, _ := newMemDB()
-	f := func() DB {
-		return wiki
-	}
 
 	Convey("We start with a empty database and add a page", t, func() {
 		record := httptest.NewRecorder()
@@ -209,7 +207,7 @@ func TestEditPageHandler(t *testing.T) {
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-		EditPageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}}, f, record, req)
+		EditPageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
 		So(record.Code, ShouldEqual, http.StatusFound)
 
 		Convey("The wiki page count should be one", func() {

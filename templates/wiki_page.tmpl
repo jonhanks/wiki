@@ -8,7 +8,7 @@
 	<div id="main">
 		<div id="header">
 			<h1>Wiki Page: {{ .PageName }}</h1>
-			<span class="breadcrumb"><a href="/edit/{{ .PageName }}/">Edit this page</a> | <a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></span>
+			<span class="breadcrumb"><a href="/edit/{{ .PageName }}/">Edit this page</a> | <a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></span><span class="breadcrumb">Hello {{ .ReqInfo.User }}</span>
 		</div>
 		<div id="content">
 			{{ .Content }}

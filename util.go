@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -34,7 +33,7 @@ func ExpandWikiWords(input []byte) []byte {
 		case TokenErr:
 			done = true
 		case TokenEOF:
-			fmt.Println("Got an EOF")
+			//fmt.Println("Got an EOF")
 			done = true
 		case TokenWikiWord:
 			buf.Write([]byte("["))
@@ -46,7 +45,7 @@ func ExpandWikiWords(input []byte) []byte {
 			buf.Write(item.Value)
 		}
 	}
-	fmt.Println("Returning ", buf.String())
+	//fmt.Println("Returning ", buf.String())
 	return buf.Bytes()
 }
 

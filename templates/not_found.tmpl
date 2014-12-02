@@ -8,7 +8,8 @@
 	<div id="main">
 		<div id="header">
 			<h1>This page has not been found</h1>
-			<span class="breadcrumb"><a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></span>
+			<span class="breadcrumb"><a href="/">List Pages</a> | <a href="/About/">About the Wiki</a></span> | 
+			<span class="breadcrumb">Hello {{ .ReqInfo.User }}</span>
 		</div>
 		<div id="content">
 			<p><a href="/edit/{{ .PageName }}/">Click here to create the page.</p>

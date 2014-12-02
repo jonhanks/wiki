@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"unicode"
 	"unicode/utf8"
@@ -70,7 +69,7 @@ func (l *Lexer) Next() (rune, error) {
 			return result, nil
 		}
 	}
-	fmt.Println("Returning io.EOF!!!!!!!!!!")
+	//fmt.Println("Returning io.EOF!!!!!!!!!!")
 	return ' ', io.EOF
 }
 
@@ -95,14 +94,14 @@ func (l *Lexer) Reverse(r rune) error {
 
 func (l *Lexer) emit(Type LexToken) {
 	segLen := l.cur - l.start
-	fmt.Println(Type)
-	fmt.Printf("segLen %d = %d - %d\n", segLen, l.cur, l.start)
-	//fmt.Printf("'%s'\n", string(l.input))
+	//fmt.Println(Type)
+	//fmt.Printf("segLen %d = %d - %d\n", segLen, l.cur, l.start)
+	////fmt.Printf("'%s'\n", string(l.input))
 	item := LexedItem{Type: Type, Value: make([]byte, segLen)}
 	copy(item.Value, l.input[l.start:l.cur])
-	fmt.Printf("Index values %d %d\nEmitting (%s) '%s'\n", l.start, l.cur, Type, string(item.Value))
+	//fmt.Printf("Index values %d %d\nEmitting (%s) '%s'\n", l.start, l.cur, Type, string(item.Value))
 	l.start = l.cur
-	fmt.Println("Start advanced to", l.start)
+	//fmt.Println("Start advanced to", l.start)
 	l.ch <- item
 }
 
@@ -121,7 +120,7 @@ func (l *Lexer) jumpToLocation(pos int) error {
 func (l *Lexer) Run() {
 	for state := textLexer; state != nil; {
 		state = state(l)
-		fmt.Println("Next lexer state is", state)
+		//fmt.Println("Next lexer state is", state)
 	}
 	close(l.ch)
 }
@@ -142,20 +141,20 @@ func textLexer(l *Lexer) stageFunc {
 		UpperCount = 1
 	}
 	emitCurrent := func() {
-		fmt.Println("In emitCurrent")
+		//fmt.Println("In emitCurrent")
 		if InWikiWord {
-			fmt.Println("InWikiWord")
+			//fmt.Println("InWikiWord")
 			// flush any pending text prior to the wiki word
 			if BeforeWikiWordStart >= 0 {
-				fmt.Println("There is something earlier")
+				//fmt.Println("There is something earlier")
 				curPos := l.saveLocation()
 				if err := l.jumpToLocation(BeforeWikiWordStart); err != nil {
-					fmt.Println("Unable to jump to location -", BeforeWikiWordStart, " start is ", l.start)
+					//fmt.Println("Unable to jump to location -", BeforeWikiWordStart, " start is ", l.start)
 				}
 				l.emit(TokenText)
-				fmt.Println("Returning to current")
+				//fmt.Println("Returning to current")
 				if err := l.jumpToLocation(curPos); err != nil {
-					fmt.Println("Unable to jump to location")
+					//fmt.Println("Unable to jump to location")
 				}
 			}
 			l.emit(TokenWikiWord)
@@ -164,8 +163,8 @@ func textLexer(l *Lexer) stageFunc {
 		}
 		BeforeWikiWordStart = l.saveLocation()
 		resetWikiWord()
-		fmt.Println("Before advanced to ", BeforeWikiWordStart)
-		fmt.Println("leaving emitCurrent")
+		//fmt.Println("Before advanced to ", BeforeWikiWordStart)
+		//fmt.Println("leaving emitCurrent")
 	}
 
 	var r rune = ' '
@@ -175,7 +174,7 @@ func textLexer(l *Lexer) stageFunc {
 		r, err = l.Next()
 		if err != nil {
 			if l.IsEOF(err) {
-				fmt.Println("EOF")
+				//fmt.Println("EOF")
 				emitCurrent()
 				l.emit(TokenEOF)
 				return nil
@@ -184,14 +183,14 @@ func textLexer(l *Lexer) stageFunc {
 			l.emit(TokenErr)
 			return nil
 		}
-		fmt.Printf("'%s' %v before:%d up:%d s:%d c:%d\n", string(r), InWikiWord, BeforeWikiWordStart, UpperCount, l.start, l.cur)
+		//fmt.Printf("'%s' %v before:%d up:%d s:%d c:%d\n", string(r), InWikiWord, BeforeWikiWordStart, UpperCount, l.start, l.cur)
 
 		if InWikiWord {
 			if unicode.IsUpper(r) {
 				UpperCount++
 			}
 			if !(unicode.IsLetter(r) || unicode.IsDigit(r)) {
-				fmt.Printf("'%s' let:%v dig:%v\n", string(r), unicode.IsLetter(r), unicode.IsDigit(r))
+				//fmt.Printf("'%s' let:%v dig:%v\n", string(r), unicode.IsLetter(r), unicode.IsDigit(r))
 				// just left wiki word
 				if UpperCount >= 2 {
 					// This is a WikiWord
@@ -202,7 +201,7 @@ func textLexer(l *Lexer) stageFunc {
 					//l.Next()
 					//}
 				} else {
-					fmt.Println("Not a WikiWord")
+					//fmt.Println("Not a WikiWord")
 				}
 				// reset wiki word variables
 				resetWikiWord()
@@ -213,7 +212,7 @@ func textLexer(l *Lexer) stageFunc {
 				CanStartWikiWord = true
 				BeforeWikiWordStart = l.saveLocation()
 			} else if CanStartWikiWord && unicode.IsUpper(r) {
-				fmt.Println("Starting wiki word ")
+				//fmt.Println("Starting wiki word ")
 				startWikiWord()
 			} else {
 				CanStartWikiWord = false
@@ -226,7 +225,7 @@ func textLexer(l *Lexer) stageFunc {
 			return linkLexer
 		} else if r == '!' {
 			// this is overly complex, fix it
-			fmt.Println("Found a !")
+			//fmt.Println("Found a !")
 			r, err = l.Next()
 			if err != nil {
 				if l.IsEOF(err) {
@@ -234,7 +233,7 @@ func textLexer(l *Lexer) stageFunc {
 					l.emit(TokenEOF)
 					return nil
 				}
-				fmt.Println("Error: ", err)
+				//fmt.Println("Error: ", err)
 				l.start = l.cur
 				l.emit(TokenErr)
 				return nil
@@ -262,7 +261,7 @@ func linkMatcher(l *Lexer, Type LexToken) stageFunc {
 	matcher := func(startRune, endRune rune) bool {
 		if r, err = l.Next(); err != nil || r != startRune {
 			l.start = l.cur
-			fmt.Printf("Did not find matching '%s' for link type got '%s'.\n", string(startRune), string(r))
+			//fmt.Printf("Did not find matching '%s' for link type got '%s'.\n", string(startRune), string(r))
 			l.emit(TokenErr)
 			return false
 		}
@@ -310,7 +309,7 @@ func linkMatcher(l *Lexer, Type LexToken) stageFunc {
 		l.emit(TokenText)
 		return textLexer(l)
 	default:
-		fmt.Println("Did not find link/image body")
+		//fmt.Println("Did not find link/image body")
 		l.emit(TokenErr)
 		return nil
 	}
@@ -329,7 +328,7 @@ func linkLexer(l *Lexer) stageFunc {
 func imageLexer(l *Lexer) stageFunc {
 	if r, err := l.Next(); err != nil || r != '!' {
 		l.start = l.cur
-		fmt.Println("No ! found for image")
+		//fmt.Println("No ! found for image")
 		l.emit(TokenErr)
 		return nil
 	}
