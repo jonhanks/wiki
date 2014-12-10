@@ -20,6 +20,10 @@ Current Status:
     * Old page revisions can be viewed
 	* Attachments and basic image support works    
 
+* Ideas being tested
+    * Using middleware as a data/compute pipeline
+        * This should make the handlers very minimal and make it easier to do a REST api and a standalone non-js interface as well.
+
 Todo
 
 * Users

@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"strconv"
 )
 
 var templates map[string]*template.Template = make(map[string]*template.Template)
@@ -67,18 +66,11 @@ func PageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 
 	details.ReqInfo = reqInfo
 
-	revision := CURRENT_REVISION
-	if revision, err = strconv.Atoi(r.FormValue("rev")); err != nil {
-		revision = CURRENT_REVISION
-	}
+	revision := CurRev(r)
 
 	details.PageName = PageName
 
-	page, err := reqInfo.DB.GetPage(PageName)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+	page := CurPage(r)
 	revisionCount := page.Revisions()
 	if revisionCount == 0 {
 		// page not found

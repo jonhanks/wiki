@@ -22,6 +22,7 @@ func main() {
 	}
 
 	stdMw := alice.New(middleware.MustGet("middleware.LoggingStdOut"), middleware.MustGet("middleware.Panic"))
+	viewMw := stdMw.Append(NewRevMiddleware)
 
 	r := mux.NewRouter()
 
@@ -31,7 +32,7 @@ func main() {
 	r.Handle("/edit/{name}/", stdMw.Then(adapt(wiki, ShowEditPageHandler))).Methods("GET")
 	r.Handle("/edit/{name}/", stdMw.Then(adapt(wiki, EditPageHandler))).Methods("POST")
 	r.Handle("/edit/:name/attachment/", stdMw.Then(adapt(wiki, AddAttachmentHandler))).Methods("POST")
-	r.Handle("/{name}/", stdMw.Then(adapt(wiki, PageHandler))).Methods("GET")
+	r.Handle("/{name}/", viewMw.Then(adapt(wiki, PageHandler))).Methods("GET")
 	r.Handle("/{name}/{attachment}", stdMw.Then(adapt(wiki, AttachmentHandler))).Methods("GET")
 
 	os.Stdout.WriteString("Staring wiki at " + endpoint + "\n")

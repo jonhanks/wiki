@@ -2,15 +2,23 @@ package main
 
 import (
 	"bytes"
+	"github.com/gorilla/context"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"regexp"
 	"strconv"
 )
 
-const _WIKIWORD_RE = "([A-Z]+[A-Za-z0-9_]*){2,}"
-const _WIKIWORD_ONLY_RE = "^" + _WIKIWORD_RE + "$"
+const (
+	keyParams = "params"
+	keyPage   = "page"
+	keyRev    = "rev"
+
+	_WIKIWORD_RE      = "([A-Z]+[A-Za-z0-9_]*){2,}"
+	_WIKIWORD_ONLY_RE = "^" + _WIKIWORD_RE + "$"
+)
 
 var WIKIWORD_RE = regexp.MustCompile(_WIKIWORD_RE)
 var WIKIWORD_ONLY_RE = regexp.MustCompile(_WIKIWORD_ONLY_RE)
@@ -121,4 +129,38 @@ func generateInt(begin, end int) <-chan int {
 
 func getListenAddress() string {
 	return ""
+}
+
+// Retreive the request paramters from the context.
+// They must be put into the context first, possibly by
+// MuxVarMiddleware
+func CurParams(r *http.Request) map[string]string {
+	if val, ok := context.GetOk(r, keyParams); ok {
+		if p, ok := val.(map[string]string); ok {
+			return p
+		}
+	}
+	return nil
+}
+
+// Retreive the current page associated with the request
+func CurPage(r *http.Request) Page {
+	if val, ok := context.GetOk(r, keyPage); ok {
+		if p, ok := val.(Page); ok {
+			return p
+		}
+	}
+	return nil
+}
+
+// CurRev retrieves the current revision for this request from the context.
+// The revision must be set in the context prior to calling CurRev
+// Returns CURRENT_REVISION if a revision value cannot be found
+func CurRev(r *http.Request) int {
+	if val, ok := context.GetOk(r, keyRev); ok {
+		if rev, ok := val.(int); ok {
+			return rev
+		}
+	}
+	return CURRENT_REVISION
 }

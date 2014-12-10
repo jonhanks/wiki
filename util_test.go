@@ -3,7 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/gorilla/context"
 	. "github.com/smartystreets/goconvey/convey"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -187,4 +189,99 @@ func TestGenerateInt(t *testing.T) {
 	if v != 0 {
 		t.Error("Expecting 0, got ", v)
 	}
+}
+
+func TestCurParams(t *testing.T) {
+	Convey("CurParams returns a map[string]string", t, func() {
+		var p map[string]string
+
+		r, err := http.NewRequest("GET", "/page/TestPage/", nil)
+		So(err, ShouldBeNil)
+
+		context.Set(r, keyParams, map[string]string{"name": "TestPage"})
+		p = CurParams(r)
+		context.Clear(r)
+		So(p, ShouldNotBeNil)
+		Convey("It should have a parameter name 'name' with value 'TestPage'", func() {
+			So(p["name"], ShouldEqual, "TestPage")
+		})
+
+		Convey("If the context is not set, an null map[string]string should be returned", func() {
+			p = CurParams(r)
+			So(p, ShouldBeNil)
+		})
+
+		Convey("We should get a nil map back if garbage was put into the system", func() {
+			context.Set(r, keyParams, int64(1))
+
+			val := CurParams(r)
+
+			So(val, ShouldBeNil)
+			context.Clear(r)
+		})
+	})
+}
+
+func TestCurPage(t *testing.T) {
+	Convey("CurPage returns the current page for a given request", t, func() {
+		r, err := http.NewRequest("GET", "/page/TestPage/", nil)
+		So(err, ShouldBeNil)
+
+		Convey("We should get a nil page back if we haven't set things up right", func() {
+			p := CurPage(r)
+			So(p, ShouldBeNil)
+		})
+
+		Convey("When we put a Page into the context it should be returned", func() {
+			db, _ := newMemDB()
+			newPage, _ := db.GetPage("TestPage")
+
+			context.Set(r, keyPage, newPage)
+
+			val := CurPage(r)
+			So(val, ShouldNotBeNil)
+			So(val, ShouldEqual, newPage)
+
+			context.Clear(r)
+		})
+
+		Convey("We should get a nil page back if garbage was put into the system", func() {
+			context.Set(r, keyPage, int64(1))
+
+			val := CurPage(r)
+
+			So(val, ShouldBeNil)
+			context.Clear(r)
+		})
+
+	})
+}
+
+func TestCurRev(t *testing.T) {
+	Convey("CurRev returns the current revision for a given request", t, func() {
+		r, err := http.NewRequest("GET", "/page/TestPage/", nil)
+		So(err, ShouldBeNil)
+		Convey("CurRev should always return a value", func() {
+			Convey("If the revision isn't set it should return CURRENT_REVISION", func() {
+				rev := CurRev(r)
+				So(rev, ShouldEqual, CURRENT_REVISION)
+			})
+			Convey("We should get CURRENT_REVISION back if garbage was put into the system", func() {
+				context.Set(r, keyRev, "abc")
+
+				val := CurRev(r)
+
+				So(val, ShouldEqual, CURRENT_REVISION)
+				context.Clear(r)
+			})
+			Convey("We should get the stored revision number back", func() {
+				context.Set(r, keyRev, int(5))
+
+				val := CurRev(r)
+
+				So(val, ShouldEqual, int(5))
+				context.Clear(r)
+			})
+		})
+	})
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gorilla/context"
 	. "github.com/smartystreets/goconvey/convey"
 	"net/http"
 	"net/http/httptest"
@@ -64,6 +65,7 @@ func TestPageHandler(t *testing.T) {
 		page, _ := wiki.GetPage("PageOne")
 		page.AddRevision([]byte("AbcDef"))
 		page.AddRevision([]byte("abc"))
+		newPage, _ := wiki.GetPage("WhichPage")
 
 		Convey("After adding pages we can test for responses from the handler", func() {
 			record := httptest.NewRecorder()
@@ -71,7 +73,9 @@ func TestPageHandler(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unable to create test request")
 			}
+			context.Set(req, keyPage, page)
 			PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
+			context.Clear(req)
 			So(record.Code, ShouldEqual, http.StatusOK)
 
 			Convey("Testing various revisions", func() {
@@ -81,7 +85,10 @@ func TestPageHandler(t *testing.T) {
 					if err != nil {
 						t.Fatalf("Unable to create test request")
 					}
+					context.Set(req, keyPage, page)
+					context.Set(req, keyRev, i)
 					PageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
+					context.Clear(req)
 					if i <= 1 {
 						So(record.Code, ShouldEqual, http.StatusOK)
 					} else {
@@ -90,15 +97,18 @@ func TestPageHandler(t *testing.T) {
 				}
 			})
 
-			Convey("Testing for a page with an invalid page name should give an error", func() {
-				record := httptest.NewRecorder()
-				req, err := http.NewRequest("GET", "/Invalid/", nil)
-				if err != nil {
-					t.Fatalf("Unable to create test request")
-				}
-				PageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}, DB: wiki}, record, req)
-				So(record.Code, ShouldEqual, http.StatusNotFound)
-			})
+			// should never happen
+			// Convey("Testing for a page with an invalid page name should give an error", func() {
+			// 	record := httptest.NewRecorder()
+			// 	req, err := http.NewRequest("GET", "/Invalid/", nil)
+			// 	if err != nil {
+			// 		t.Fatalf("Unable to create test request")
+			// 	}
+			// 	context.Set(req, keyPage, page)
+			// 	PageHandler(&RequestInfo{Params: map[string]string{"name": "Invalid"}, DB: wiki}, record, req)
+			// 	context.Clear(req)
+			// 	So(record.Code, ShouldEqual, http.StatusNotFound)
+			// })
 
 			Convey("Testing for a page with a page that does not exist should be ok", func() {
 				record := httptest.NewRecorder()
@@ -106,7 +116,9 @@ func TestPageHandler(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Unable to create test request")
 				}
+				context.Set(req, keyPage, newPage)
 				PageHandler(&RequestInfo{Params: map[string]string{"name": "WhichPage"}, DB: wiki}, record, req)
+				context.Clear(req)
 				So(record.Code, ShouldEqual, http.StatusOK)
 			})
 		})
