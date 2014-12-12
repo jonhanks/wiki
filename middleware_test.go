@@ -10,6 +10,86 @@ import (
 	"testing"
 )
 
+func TestVieworCreateMiddleware(t *testing.T) {
+	created := false
+	viewed := false
+	var (
+		createHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+			created = true
+		}
+		viewHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+			viewed = true
+		}
+	)
+
+	wiki, _ := newMemDB()
+	pageView, _ := wiki.GetPage("PageExists")
+	pageView.AddRevision([]byte("AbcDef"))
+	pageCreate, _ := wiki.GetPage("PageNew")
+
+	wrapMware := func(m http.Handler) http.Handler {
+		return NewMuxVarMiddleware(NewPageLookupMiddleware(wiki, m))
+	}
+	_ = pageCreate
+	_ = createHandler
+	_ = viewHandler
+	Convey("The VieworCreateMiddleware dispatches to different paths depending on the status of the requested page", t, func() {
+		m := NewViewCreateMiddleware(viewHandler, createHandler)
+		chain := wrapMware(m)
+		Convey("The factory function should return a non-nil value", func() {
+			So(m, ShouldNotBeNil)
+		})
+
+		Convey("The middleware should call the next function", func() {
+			Convey("For existing pages the next function is the view function", func() {
+				created = false
+				viewed = false
+				record := httptest.NewRecorder()
+				req, err := http.NewRequest("GET", "/page/PageExists/", nil)
+				So(err, ShouldBeNil)
+
+				mx := mux.NewRouter()
+				mx.Path("/page/{name}/").Handler(chain)
+
+				mx.ServeHTTP(record, req)
+				So(record.Code, ShouldEqual, http.StatusOK)
+				So(viewed, ShouldBeTrue)
+				So(created, ShouldBeFalse)
+			})
+			Convey("For new pages the next function is the create function", func() {
+				created = false
+				viewed = false
+				record := httptest.NewRecorder()
+				req, err := http.NewRequest("GET", "/page/PageNew/", nil)
+				So(err, ShouldBeNil)
+
+				mx := mux.NewRouter()
+				mx.Path("/page/{name}/").Handler(chain)
+
+				mx.ServeHTTP(record, req)
+				So(record.Code, ShouldEqual, http.StatusOK)
+				So(viewed, ShouldBeFalse)
+				So(created, ShouldBeTrue)
+			})
+		})
+		Convey("For a junk page, you return a 404", func() {
+			created = false
+			viewed = false
+			record := httptest.NewRecorder()
+			req, err := http.NewRequest("GET", "/page/invalid/", nil)
+			So(err, ShouldBeNil)
+
+			mx := mux.NewRouter()
+			mx.Path("/page/{name}/").Handler(chain)
+
+			mx.ServeHTTP(record, req)
+			So(record.Code, ShouldEqual, http.StatusNotFound)
+			So(viewed, ShouldBeFalse)
+			So(created, ShouldBeFalse)
+		})
+	})
+}
+
 func TestPageLookupMiddleware(t *testing.T) {
 	called := false
 	var pageData Page

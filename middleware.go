@@ -7,6 +7,18 @@ import (
 	"strconv"
 )
 
+func NewViewCreateMiddleware(view http.Handler, create http.Handler) http.Handler {
+	var f http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		p := CurPage(r)
+		if p.Revisions() > 0 {
+			view.ServeHTTP(w, r)
+			return
+		}
+		create.ServeHTTP(w, r)
+	}
+	return f
+}
+
 func NewPageLookupMiddleware(db DB, next http.Handler) http.Handler {
 	var f http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		params := CurParams(r)

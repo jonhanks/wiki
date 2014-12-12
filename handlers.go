@@ -47,6 +47,22 @@ func AboutPageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Reque
 	templates["about_page"].Execute(w, &details)
 }
 
+func CreatePageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
+	var details struct {
+		PageName string
+		ReqInfo  *RequestInfo
+	}
+
+	page := CurPage(r)
+	if page.Revisions() > 0 {
+		PageHandler(reqInfo, w, r)
+		return
+	}
+	details.ReqInfo = reqInfo
+	details.PageName = page.Name()
+	templates["not_found"].Execute(w, &details)
+}
+
 func PageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 	PageName := reqInfo.Params["name"]
 
@@ -72,11 +88,7 @@ func PageHandler(reqInfo *RequestInfo, w http.ResponseWriter, r *http.Request) {
 
 	page := CurPage(r)
 	revisionCount := page.Revisions()
-	if revisionCount == 0 {
-		// page not found
-		templates["not_found"].Execute(w, &details)
-		return
-	}
+
 	details.AttachmentList, err = page.ListAttachments()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

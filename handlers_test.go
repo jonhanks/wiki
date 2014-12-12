@@ -59,6 +59,59 @@ func TestListPageHandler(t *testing.T) {
 	})
 }
 
+func TestCreatePageHandler(t *testing.T) {
+	wiki, _ := newMemDB()
+	Convey("First we create a wiki database", t, func() {
+		page, _ := wiki.GetPage("PageOne")
+		page.AddRevision([]byte("AbcDef"))
+		page.AddRevision([]byte("abc"))
+		newPage, _ := wiki.GetPage("WhichPage")
+
+		Convey("After adding pages we can test for responses from the handler, they are actually passed onto PageHandler", func() {
+			record := httptest.NewRecorder()
+			req, err := http.NewRequest("GET", "/PageOne/", nil)
+			if err != nil {
+				t.Fatalf("Unable to create test request")
+			}
+			context.Set(req, keyPage, page)
+			CreatePageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
+			context.Clear(req)
+			So(record.Code, ShouldEqual, http.StatusOK)
+
+			Convey("Testing various revisions", func() {
+				for i := -1; i <= 2; i++ {
+					record := httptest.NewRecorder()
+					req, err := http.NewRequest("GET", "/PageOne/?rev="+strconv.Itoa(i), nil)
+					if err != nil {
+						t.Fatalf("Unable to create test request")
+					}
+					context.Set(req, keyPage, page)
+					context.Set(req, keyRev, i)
+					CreatePageHandler(&RequestInfo{Params: map[string]string{"name": "PageOne"}, DB: wiki}, record, req)
+					context.Clear(req)
+					if i <= 1 {
+						So(record.Code, ShouldEqual, http.StatusOK)
+					} else {
+						So(record.Code, ShouldEqual, http.StatusNotFound)
+					}
+				}
+			})
+
+			Convey("Testing for a page with a page that does not exist should result be fine", func() {
+				record := httptest.NewRecorder()
+				req, err := http.NewRequest("GET", "/WhichPage/", nil)
+				if err != nil {
+					t.Fatalf("Unable to create test request")
+				}
+				context.Set(req, keyPage, newPage)
+				CreatePageHandler(&RequestInfo{Params: map[string]string{"name": "WhichPage"}, DB: wiki}, record, req)
+				context.Clear(req)
+				So(record.Code, ShouldEqual, http.StatusOK)
+			})
+		})
+	})
+}
+
 func TestPageHandler(t *testing.T) {
 	wiki, _ := newMemDB()
 	Convey("First we create a wiki database", t, func() {
@@ -110,7 +163,7 @@ func TestPageHandler(t *testing.T) {
 			// 	So(record.Code, ShouldEqual, http.StatusNotFound)
 			// })
 
-			Convey("Testing for a page with a page that does not exist should be ok", func() {
+			Convey("Testing for a page with a page that does not exist should result in a 404", func() {
 				record := httptest.NewRecorder()
 				req, err := http.NewRequest("GET", "/WhichPage/", nil)
 				if err != nil {
@@ -119,7 +172,7 @@ func TestPageHandler(t *testing.T) {
 				context.Set(req, keyPage, newPage)
 				PageHandler(&RequestInfo{Params: map[string]string{"name": "WhichPage"}, DB: wiki}, record, req)
 				context.Clear(req)
-				So(record.Code, ShouldEqual, http.StatusOK)
+				So(record.Code, ShouldEqual, http.StatusNotFound)
 			})
 		})
 	})
