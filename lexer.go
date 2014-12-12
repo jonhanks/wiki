@@ -247,9 +247,6 @@ func textLexer(l *Lexer) stageFunc {
 			}
 		}
 	}
-	l.cur = len(l.input)
-	l.emit(TokenText)
-	return nil
 }
 
 // Match link type objects (images, links, and references)
