@@ -53,29 +53,30 @@ func doTestAttachments(t *testing.T, db DB, dbType string) {
 		page, err := db.GetPage("TestPage")
 		So(err, ShouldBeNil)
 
-		err = page.AddRevision([]byte("AbcDef"))
-		So(err, ShouldBeNil)
-
-		Convey("The page can have attachments, initially there will be none", func() {
+		Convey("An uninitialized page should have 0 attachments", func() {
 			count, err := page.CountAttachments()
 			So(err, ShouldBeNil)
 			So(count, ShouldEqual, 0)
 
-			Convey("Attachments cannot have an invalid name", func() {
-				err = page.AddAttachment(strings.NewReader(attachment1), "$attachment1.txt")
-				So(err, ShouldNotBeNil)
-				err = page.AddAttachment(strings.NewReader(attachment1), "")
-				So(err, ShouldNotBeNil)
+			list, err := page.ListAttachments()
+			So(err, ShouldBeNil)
+			So(len(list), ShouldEqual, 0)
 
-				Convey("Adding an attachment should bring the count to 1", func() {
-					err = page.AddAttachment(strings.NewReader(attachment1), "attachment1.txt")
-					So(err, ShouldBeNil)
+			err = page.AddRevision([]byte("AbcDef"))
+			So(err, ShouldBeNil)
 
-					count, err = page.CountAttachments()
-					So(err, ShouldBeNil)
-					So(count, ShouldEqual, 1)
+			Convey("The page can have attachments, initially there will be none", func() {
+				count, err = page.CountAttachments()
+				So(err, ShouldBeNil)
+				So(count, ShouldEqual, 0)
 
-					Convey("However, duplicate names are overwrite attachments", func() {
+				Convey("Attachments cannot have an invalid name", func() {
+					err = page.AddAttachment(strings.NewReader(attachment1), "$attachment1.txt")
+					So(err, ShouldNotBeNil)
+					err = page.AddAttachment(strings.NewReader(attachment1), "")
+					So(err, ShouldNotBeNil)
+
+					Convey("Adding an attachment should bring the count to 1", func() {
 						err = page.AddAttachment(strings.NewReader(attachment1), "attachment1.txt")
 						So(err, ShouldBeNil)
 
@@ -83,49 +84,57 @@ func doTestAttachments(t *testing.T, db DB, dbType string) {
 						So(err, ShouldBeNil)
 						So(count, ShouldEqual, 1)
 
-						Convey("Adding a second attachment should increase the count to 2", func() {
-							err = page.AddAttachment(strings.NewReader(attachment2), "attachment2.txt")
+						Convey("However, duplicate names are overwrite attachments", func() {
+							err = page.AddAttachment(strings.NewReader(attachment1), "attachment1.txt")
 							So(err, ShouldBeNil)
 
 							count, err = page.CountAttachments()
 							So(err, ShouldBeNil)
-							So(count, ShouldEqual, 2)
+							So(count, ShouldEqual, 1)
 
-							Convey("We can list attachments as well", func() {
-								list, err := page.ListAttachments()
+							Convey("Adding a second attachment should increase the count to 2", func() {
+								err = page.AddAttachment(strings.NewReader(attachment2), "attachment2.txt")
 								So(err, ShouldBeNil)
-								So(list, ShouldContain, "attachment1.txt")
-								So(list, ShouldContain, "attachment2.txt")
-								So(len(list), ShouldEqual, 2)
 
-								Convey("We can retreive attachments and check their contents", func() {
-									entry, err := page.GetAttachment("attachment1.txt")
+								count, err = page.CountAttachments()
+								So(err, ShouldBeNil)
+								So(count, ShouldEqual, 2)
+
+								Convey("We can list attachments as well", func() {
+									list, err = page.ListAttachments()
 									So(err, ShouldBeNil)
-									So(entry.Name(), ShouldEqual, "attachment1.txt")
+									So(list, ShouldContain, "attachment1.txt")
+									So(list, ShouldContain, "attachment2.txt")
+									So(len(list), ShouldEqual, 2)
 
-									rc, err := entry.Open()
-									So(err, ShouldBeNil)
-									defer rc.Close()
+									Convey("We can retreive attachments and check their contents", func() {
+										entry, err := page.GetAttachment("attachment1.txt")
+										So(err, ShouldBeNil)
+										So(entry.Name(), ShouldEqual, "attachment1.txt")
 
-									var buf bytes.Buffer
-									io.Copy(&buf, rc)
-									So(bytes.Compare(buf.Bytes(), []byte(attachment1)), ShouldEqual, 0)
+										rc, err := entry.Open()
+										So(err, ShouldBeNil)
+										defer rc.Close()
 
-									entry, err = page.GetAttachment("attachment2.txt")
-									So(err, ShouldBeNil)
-									So(entry.Name(), ShouldEqual, "attachment2.txt")
+										var buf bytes.Buffer
+										io.Copy(&buf, rc)
+										So(bytes.Compare(buf.Bytes(), []byte(attachment1)), ShouldEqual, 0)
 
-									Convey("Requestion invalid names and non-existant attachments should fail", func() {
-										entry, err = page.GetAttachment("att/a..chment2.txt")
-										So(err, ShouldNotBeNil)
-										entry, err = page.GetAttachment("attachment3.txt")
-										So(err, ShouldNotBeNil)
+										entry, err = page.GetAttachment("attachment2.txt")
+										So(err, ShouldBeNil)
+										So(entry.Name(), ShouldEqual, "attachment2.txt")
+
+										Convey("Requestion invalid names and non-existant attachments should fail", func() {
+											entry, err = page.GetAttachment("att/a..chment2.txt")
+											So(err, ShouldNotBeNil)
+											entry, err = page.GetAttachment("attachment3.txt")
+											So(err, ShouldNotBeNil)
+										})
 									})
 								})
 							})
 						})
 					})
-
 				})
 			})
 
@@ -206,25 +215,29 @@ func doTestDB(t *testing.T, db DB, dbType string) {
 						So(err, ShouldBeNil)
 						So(page.Revisions(), ShouldEqual, NO_REVISIONS)
 
-						Convey("We can test existance as well", func() {
-							dat, err := db.PageExists("PageOne")
-							So(err, ShouldBeNil)
-							So(dat, ShouldBeTrue)
-							dat, err = db.PageExists("PageTwo")
-							So(err, ShouldBeNil)
-							So(dat, ShouldBeTrue)
-							dat, err = db.PageExists("PageThree")
-							So(err, ShouldBeNil)
-							So(dat, ShouldBeFalse)
+						Convey("The pages should know what their name is", func() {
+							So(page.Name(), ShouldEqual, "PageThree")
 
-							Convey("Page names that are not WikiWords should fail", func() {
-								_, err = db.PageExists("pageOne")
-								So(err, ShouldNotBeNil)
-								_, err = db.GetPage("pageOne")
-								So(err, ShouldNotBeNil)
+							Convey("We can test existance as well", func() {
+								dat, err := db.PageExists("PageOne")
+								So(err, ShouldBeNil)
+								So(dat, ShouldBeTrue)
+								dat, err = db.PageExists("PageTwo")
+								So(err, ShouldBeNil)
+								So(dat, ShouldBeTrue)
+								dat, err = db.PageExists("PageThree")
+								So(err, ShouldBeNil)
+								So(dat, ShouldBeFalse)
 
-								_, err = db.GetPage("pageOne")
-								So(err, ShouldNotBeNil)
+								Convey("Page names that are not WikiWords should fail", func() {
+									_, err = db.PageExists("pageOne")
+									So(err, ShouldNotBeNil)
+									_, err = db.GetPage("pageOne")
+									So(err, ShouldNotBeNil)
+
+									_, err = db.GetPage("pageOne")
+									So(err, ShouldNotBeNil)
+								})
 							})
 						})
 					})

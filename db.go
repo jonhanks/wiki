@@ -44,6 +44,7 @@ type Page interface {
 	GetData(int) ([]byte, error)
 	AddRevision([]byte) error
 	Revisions() int
+	Name() string
 	AddAttachment(io.Reader, string) error
 	ListAttachments() ([]string, error)
 	CountAttachments() (int, error)
@@ -68,6 +69,7 @@ type memDB struct {
 type memPage struct {
 	lock        sync.Mutex
 	db          *memDB
+	name        string
 	revisions   [][]byte
 	attachments map[string][]byte
 }
@@ -217,6 +219,10 @@ func (fpg *filePage) Revisions() int {
 	return NO_REVISIONS
 }
 
+func (fpg *filePage) Name() string {
+	return path.Base(fpg.path)
+}
+
 func (fpg *filePage) AddAttachment(data io.Reader, key string) error {
 	if !attachment_re.MatchString(key) {
 		return errors.New("Invalid name " + key)
@@ -246,6 +252,9 @@ func (fpg *filePage) ListAttachments() ([]string, error) {
 		}
 		return results, nil
 	} else {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
 		return nil, err
 	}
 }
@@ -254,6 +263,9 @@ func (fpg *filePage) CountAttachments() (int, error) {
 	if fInfos, err := ioutil.ReadDir(fpg.path); err == nil {
 		return getCountFDBAttachments(fInfos), nil
 	} else {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
 		return 0, err
 	}
 }
@@ -305,7 +317,7 @@ func (mdb *memDB) GetPage(key string) (Page, error) {
 	}
 	val, ok := mdb.pages[key]
 	if !ok {
-		val = &memPage{db: mdb, revisions: make([][]byte, 0), attachments: make(map[string][]byte)}
+		val = &memPage{db: mdb, revisions: make([][]byte, 0), name: key, attachments: make(map[string][]byte)}
 		mdb.pages[key] = val
 	}
 	return Page(val), nil
@@ -366,6 +378,10 @@ func (mp *memPage) Revisions() int {
 	defer mp.lock.Unlock()
 
 	return len(mp.revisions)
+}
+
+func (mp *memPage) Name() string {
+	return mp.name
 }
 
 func (mp *memPage) AddAttachment(data io.Reader, key string) error {
